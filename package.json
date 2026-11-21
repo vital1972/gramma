@@ -1,0 +1,35 @@
+{
+  "name": "detective-oshibkin",
+  "productName": "Детектив Ошибкин",
+  "version": "0.1.0",
+  "description": "Тренажёр русского языка для 4 класса: короткие занятия-перерывы во время игры",
+  "main": "src/main/main.js",
+  "author": "vital1972",
+  "license": "MIT",
+  "private": true,
+  "repository": { "type": "git", "url": "https://github.com/vital1972/gramma.git" },
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --win --publish never",
+    "release": "electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "ru.gramma.oshibkin",
+    "productName": "Детектив Ошибкин",
+    "artifactName": "DetectiveOshibkin-Setup-${version}.${ext}",
+    "files": ["src/**/*", "content/**/*", "build/tray.png", "package.json"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.ico" },
+    "nsis": { "oneClick": true, "perMachine": false, "shortcutName": "Детектив Ошибкин", "createDesktopShortcut": true, "runAfterFinish": true },
+    "publish": [{ "provider": "github", "owner": "vital1972", "repo": "gramma", "releaseType": "release" }]
+  }
+}

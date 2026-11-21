@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Детектив Ошибкин</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { height: 100%; }
+  body { overflow: auto; padding: 32px 16px; background: radial-gradient(ellipse at 50% 0%, var(--desk-3), var(--desk) 70%); }
+  .card { width: min(820px, 100%); margin: 0 auto; background: var(--desk-2); border: 1px solid var(--line); border-radius: 16px; padding: 22px;
+    display: flex; flex-direction: column; gap: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+  .case-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .case-head h2 { margin: 0; font-size: 20px; }
+  .det { display: flex; gap: 12px; align-items: center; }
+  .ava { flex: none; width: 58px; height: 58px; border-radius: 50%; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; font-weight: 700; font-size: 18px; border: 3px solid #fff3; }
+  .say { background: var(--desk-3); border-radius: 12px; padding: 10px 14px; min-width: 0; font-size: 16px; }
+  .paper { background: var(--paper); color: var(--paper-ink); font-family: var(--hand); font-size: 28px; line-height: 1.75; padding: 18px 24px; border-radius: 6px;
+    background-image: repeating-linear-gradient(transparent 0 48px, var(--paper-line) 48px 49px); background-position: 0 12px; transform: rotate(-.4deg); }
+  .w { cursor: pointer; border-radius: 6px; padding: 0 2px; transition: background .15s; }
+  .w:hover { background: rgba(240,180,60,.35); }
+  .w.ok { background: rgba(63,155,92,.25); outline: 2px solid var(--good); }
+  .w.half { background: rgba(217,130,43,.25); outline: 2px solid var(--warn); }
+  .w.miss { background: rgba(194,72,61,.18); outline: 2px dashed var(--bad); }
+  .w.false { animation: shake .4s; }
+  .w.hint { background: rgba(240,180,60,.45); }
+  .w.sel { outline: 3px solid var(--lamp); }
+  @keyframes shake { 25% { transform: translateX(-4px) } 75% { transform: translateX(4px) } }
+  .fix { font-family: var(--ui); font-size: 13px; color: var(--good); vertical-align: super; margin-left: 2px; font-weight: 700; }
+  .edit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--desk-3); border-radius: 12px; padding: 12px; }
+  .edit input { font: 500 20px var(--ui); padding: 8px 10px; border-radius: 8px; border: 1px solid #5a5068; background: var(--desk); color: var(--ink); min-width: 0; flex: 1 1 180px; }
+  .edit .lbl { font-size: 14px; color: var(--ink-dim); flex-basis: 100%; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+  .rule { background: var(--paper); color: var(--paper-ink); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .rule h3 { margin: 0; font-size: 18px; }
+  .rule .villain { font-size: 13px; font-weight: 700; color: #8a5a12; text-transform: uppercase; letter-spacing: .06em; }
+  .rule .ex { font-family: var(--hand); font-size: 24px; }
+  .quiz { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .quiz .q { font-family: var(--hand); font-size: 26px; flex-basis: 100%; }
+  .quiz button { background: #fff8; border-color: #c9b78f; color: var(--paper-ink); min-width: 64px; font-size: 19px; }
+  .quiz button.right { background: var(--good); color: #fff; }
+  .quiz button.wrong { background: var(--bad); color: #fff; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .stat { background: var(--desk-3); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .stat .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 13px; color: var(--ink-dim); }
+  .meter { height: 10px; border-radius: 99px; background: var(--desk); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--lamp); }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; border-radius: 99px; padding: 3px 9px; background: var(--desk-3); }
+  .chip.weak { background: rgba(194,72,61,.25); }
+  .chip.strong { background: rgba(63,155,92,.25); }
+  .lbl-small { font-size: 12px; color: var(--ink-dim); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <main class="card" id="card" aria-live="polite">
+    <div class="say">Детектив открывает папку с делом…</div>
+  </main>
+<script src="../core/content.js"></script>
+<script src="session.js"></script>
+</body>
+</html>

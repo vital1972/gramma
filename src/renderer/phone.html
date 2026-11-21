@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Телефон детектива</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { background: transparent; overflow: hidden; height: 100%; }
+  body { display: flex; justify-content: flex-end; align-items: flex-end; gap: 12px; padding: 6px; user-select: none; }
+  .phone { width: 170px; height: 270px; flex: none; border-radius: 24px; background: #111; border: 3px solid #444; box-shadow: 0 6px 18px rgba(0,0,0,.6);
+    padding: 10px 8px; display: flex; flex-direction: column; gap: 8px; color: #fff; cursor: pointer; }
+  .notch { width: 40px; height: 5px; border-radius: 3px; background: #333; align-self: center; }
+  .scr { flex: 1; border-radius: 14px; background: linear-gradient(#2c3e57, #1a2433); padding: 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .from { font-size: 12px; color: #a9c2e6; }
+  .msg { font-size: 15px; font-weight: 700; line-height: 1.25; }
+  .sub { font-size: 12px; color: #c9d5e6; }
+  .cd { margin-top: auto; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--lamp); }
+  .buzz { animation: buzz .5s ease-in-out 3; }
+  @keyframes buzz { 0%,100% { transform: translate(0,0) rotate(0) } 20% { transform: translate(-2px,0) rotate(-2deg) } 40% { transform: translate(2px,0) rotate(2deg) } 60% { transform: translate(-2px,0) rotate(-1deg) } 80% { transform: translate(2px,0) rotate(1deg) } }
+  .menu { width: 270px; flex: none; background: #151b26; border: 1px solid #3d4a61; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .menu button { padding: 8px 12px; }
+  .menu h3 { margin: 0; font-size: 15px; }
+  .menu p { margin: 0; font-size: 13px; color: var(--ink-dim); }
+  .keys { font-size: 12px; color: var(--ink-dim); }
+</style>
+</head>
+<body>
+  <div class="menu" id="menu" hidden>
+    <h3>Новое сообщение от детектива Ошибкина</h3>
+    <p id="menuText">«Есть новое дело! Доиграй битву и приходи.»</p>
+    <button class="btn-main" id="read">Прочитать (F9)</button>
+    <button class="btn-ghost" id="later">Отложить на 2 мин (F10)</button>
+    <div class="keys" id="laterNote"></div>
+  </div>
+  <div class="phone" id="phone" role="button" aria-label="Телефон детектива">
+    <div class="notch"></div>
+    <div class="scr">
+      <div class="from">Детектив Ошибкин</div>
+      <div class="msg" id="msg">1 новое сообщение</div>
+      <div class="sub" id="sub">Нажми, чтобы открыть</div>
+      <div class="cd" id="cd"></div>
+    </div>
+  </div>
+<script src="phone.js"></script>
+</body>
+</html>

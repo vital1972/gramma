@@ -1,0 +1,42 @@
+name: Сборка для Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Тесты и проверка банка заданий
+        run: node --test test/*.test.js
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Сборка установщика
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: npm run dist
+      - name: Сборка и выпуск релиза (по тегу v*)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DetectiveOshibkin-Setup
+          path: dist/*.exe

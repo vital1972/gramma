@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Детектив Ошибкин — настройки</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body { padding: 20px 16px 40px; }
+  .wrap { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-size: 21px; margin: 0; }
+  .sub { color: var(--ink-dim); margin: 2px 0 0; font-size: 13px; }
+  section { background: var(--desk-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  section h2 { margin: 0; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 18px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-dim); }
+  .field input, .field select { font: inherit; color: var(--ink); background: var(--desk); border: 1px solid #4a4256; border-radius: 8px; padding: 7px 9px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--lamp); }
+  .help { font-size: 12px; color: var(--ink-dim); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .stat { background: var(--desk-3); border-radius: 12px; padding: 10px 12px; }
+  .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 12px; color: var(--ink-dim); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-dim); font-weight: 500; }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; border-radius: 99px; padding: 3px 9px; background: var(--desk-3); }
+  .chip.weak { background: rgba(194,72,61,.25); }
+  .chip.strong { background: rgba(63,155,92,.25); }
+  .pin { max-width: 360px; margin: 60px auto 0; }
+  .pin input { font: 600 24px var(--ui); letter-spacing: .3em; text-align: center; }
+  code { background: var(--desk); border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="pin" id="lock" hidden>
+    <h2 id="lockTitle">Введите PIN родителя</h2>
+    <p class="help" id="lockHelp"></p>
+    <label class="field">PIN<input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+    <label class="field" id="pin2Wrap" hidden>Ещё раз<input id="pin2In" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+    <button class="btn-main" id="pinOk">Войти</button>
+    <div class="toast" id="pinToast"></div>
+  </section>
+
+  <div id="main" hidden>
+    <div class="wrap">
+      <header class="row" style="justify-content:space-between">
+        <div><h1>Детектив Ошибкин</h1><p class="sub" id="ver"></p></div>
+        <button class="btn-ghost" id="lockBtn">Закрыть на PIN</button>
+      </header>
+
+      <section>
+        <h2>Отчёт</h2>
+        <div class="stats" id="stats"></div>
+        <div><div class="help" style="margin-bottom:6px">Правила (красные — даются чаще)</div><div class="files" id="chips"></div></div>
+        <table><thead><tr><th>День</th><th>Дел</th><th>Улик найдено</th><th>Коинов</th><th>Минут</th></tr></thead><tbody id="log"></tbody></table>
+      </section>
+
+      <section>
+        <h2>Занятия</h2>
+        <div class="grid">
+          <label class="field">Имя ребёнка<input id="childName"></label>
+          <label class="field">Занятие через каждые, мин игры<input id="intervalMin" type="number" min="5" max="120"></label>
+          <label class="field">Максимум дел за занятие<select id="maxTasks"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="field">Предупреждение заранее, сек<input id="warnSec" type="number" min="10" max="600"></label>
+          <label class="field">«Отложить» на, сек<input id="postponeSec" type="number" min="30" max="600"></label>
+          <label class="field">Сколько раз можно отложить<input id="postponeLimit" type="number" min="0" max="3"></label>
+          <label class="field">Тишина клавиатуры и мыши до старта, сек<input id="idleStartSec" type="number" min="3" max="60"></label>
+          <label class="field">Ждать паузу не дольше, сек<input id="maxWaitPauseSec" type="number" min="30" max="1800"></label>
+          <label class="field">Не беспокоить с (ЧЧ:ММ)<input id="quietFrom" placeholder="например 21:00"></label>
+          <label class="field">до (ЧЧ:ММ)<input id="quietTo" placeholder="например 08:00"></label>
+        </div>
+        <p class="help">Через «Ждать паузу не дольше» занятие начнётся, даже если ребёнок не отпускает мышь: перед этим 10 секунд обратного отсчёта на телефоне.</p>
+      </section>
+
+      <section>
+        <h2>Коины и «отпуск»</h2>
+        <div class="grid">
+          <label class="field">Цена отпуска, коинов<input id="vacationPrice" type="number" min="20" max="5000"></label>
+          <label class="field">Отпусков в день, не больше<input id="vacationsPerDay" type="number" min="0" max="5"></label>
+        </div>
+        <p class="help">За одно дело без ошибок ребёнок получает около 65 коинов, с ошибками 20–40.</p>
+      </section>
+
+      <section>
+        <h2>Отчёт в Telegram</h2>
+        <div class="grid">
+          <label class="field">Токен бота (от @BotFather)<input id="telegramToken" type="password" autocomplete="off"></label>
+          <label class="field">Номер чата (chat id)<input id="telegramChatId" autocomplete="off"></label>
+          <label class="field">Отчёт за день в (ЧЧ:ММ, пусто — не слать)<input id="dailyReportAt"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="reportEachSession"> Сообщать после каждого занятия</label>
+        <div class="row"><button class="btn-ghost" id="tgTest">Отправить проверочное сообщение</button><span class="toast" id="tgToast"></span></div>
+        <p class="help">Как получить токен и номер чата, написано в README на GitHub. Токен хранится только на этом компьютере.</p>
+      </section>
+
+      <section>
+        <h2>Программа</h2>
+        <label class="check"><input type="checkbox" id="autostart"> Запускать вместе с Windows</label>
+        <div class="row">
+          <button class="btn-main" id="save">Сохранить настройки</button>
+          <span class="toast" id="saveToast"></span>
+        </div>
+        <div class="row">
+          <button class="btn-ghost" id="startNow">Открыть дело сейчас</button>
+          <button class="btn-ghost" id="stopSession">Прервать занятие</button>
+          <button class="btn-ghost" id="checkUpdates">Проверить обновления</button>
+          <span class="toast" id="actToast"></span>
+        </div>
+        <div class="row">
+          <label class="field">Новый PIN<input id="newPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+          <button class="btn-ghost" id="changePin">Сменить PIN</button>
+        </div>
+        <div class="row">
+          <button class="btn-danger" id="reset">Сбросить прогресс</button>
+          <button class="btn-danger" id="quit">Выйти из программы</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="../core/content.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

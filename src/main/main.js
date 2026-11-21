@@ -1,0 +1,356 @@
+// Детектив Ошибкин — фоновая программа в трее Windows.
+'use strict';
+const path = require('path');
+const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, powerMonitor, screen, nativeImage } = require('electron');
+const { Store, dayKey, PROFILE_DEFAULTS } = require('./store');
+const { Scheduler } = require('../core/scheduler');
+const { VeloLink } = require('./velo');
+const telegram = require('./telegram');
+const updater = require('./updater');
+
+const ROOT = path.join(__dirname, '..', '..');
+const RENDERER = path.join(__dirname, '..', 'renderer');
+const PRELOAD = path.join(__dirname, 'preload.js');
+const DEMO = process.argv.includes('--demo'); // ускоренный режим для проверки: 1 минута вместо 15
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
+let store;
+let content;
+let scheduler;
+let velo;
+let appUpdates;
+let tray;
+let phoneWin = null;
+let sessionWin = null;
+let settingsWin = null;
+let allowSessionClose = false;
+let session = null; // итоги текущего занятия
+let hotkeys = false;
+
+function log(msg) {
+  // eslint-disable-next-line no-console
+  console.log(new Date().toISOString(), msg);
+}
+
+function schedulerSettings() {
+  const s = Object.assign({}, store.settings);
+  if (DEMO) Object.assign(s, { intervalMin: 1, warnSec: 15, postponeSec: 15, maxWaitPauseSec: 30 });
+  return s;
+}
+
+// ---------- окна ----------
+
+function webPrefs() {
+  return { preload: PRELOAD, contextIsolation: true, nodeIntegration: false, sandbox: true };
+}
+
+const PHONE = { w: 190, h: 290 };
+const PHONE_MENU = { w: 480, h: 300 };
+
+function placePhone(size) {
+  const wa = screen.getPrimaryDisplay().workArea;
+  phoneWin.setBounds({ x: wa.x + wa.width - size.w - 16, y: wa.y + wa.height - size.h - 16, width: size.w, height: size.h });
+}
+
+function showPhone(mode) {
+  if (!phoneWin) {
+    phoneWin = new BrowserWindow({
+      width: PHONE.w, height: PHONE.h, frame: false, transparent: true, resizable: false, movable: false,
+      skipTaskbar: true, alwaysOnTop: true, focusable: false, show: false, webPreferences: webPrefs(),
+    });
+    phoneWin.setAlwaysOnTop(true, 'screen-saver');
+    phoneWin.loadFile(path.join(RENDERER, 'phone.html'));
+    phoneWin.on('closed', () => { phoneWin = null; });
+    phoneWin.webContents.once('did-finish-load', () => pushPhone(mode, true));
+    placePhone(PHONE);
+  } else {
+    pushPhone(mode, true);
+  }
+  if (!phoneWin.isVisible()) phoneWin.showInactive();
+  registerHotkeys();
+}
+
+function pushPhone(mode, buzz) {
+  if (!phoneWin) return;
+  phoneWin.webContents.send('phone:update', {
+    mode: mode || scheduler.state,
+    left: Math.max(0, Math.ceil(scheduler.left)),
+    canPostpone: scheduler.canPostpone(),
+    buzz: !!buzz,
+  });
+}
+
+function hidePhone() {
+  unregisterHotkeys();
+  if (phoneWin) phoneWin.hide();
+  if (phoneWin) placePhone(PHONE);
+}
+
+function registerHotkeys() {
+  if (hotkeys) return;
+  // Клавиши заняты только пока телефон на экране, чтобы не мешать игре.
+  hotkeys = globalShortcut.register('F9', () => readNow()) && globalShortcut.register('F10', () => postpone());
+}
+
+function unregisterHotkeys() {
+  if (!hotkeys) return;
+  globalShortcut.unregister('F9');
+  globalShortcut.unregister('F10');
+  hotkeys = false;
+}
+
+function openSessionWindow() {
+  hidePhone();
+  velo.set('session', 'task');
+  session = { started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false };
+  allowSessionClose = false;
+  sessionWin = new BrowserWindow({
+    fullscreen: true, frame: false, alwaysOnTop: true, skipTaskbar: false, closable: true, minimizable: false,
+    backgroundColor: '#1d1a24', show: false, webPreferences: webPrefs(),
+  });
+  sessionWin.setAlwaysOnTop(true, 'screen-saver');
+  sessionWin.setMenuBarVisibility(false);
+  sessionWin.loadFile(path.join(RENDERER, 'session.html'));
+  sessionWin.once('ready-to-show', () => { sessionWin.show(); sessionWin.focus(); });
+  // Закрыть окно занятия можно только кнопкой «Вернуться в игру» или из трея по PIN.
+  sessionWin.on('close', (e) => { if (!allowSessionClose) e.preventDefault(); });
+  sessionWin.on('blur', () => { if (sessionWin && !allowSessionClose) setTimeout(() => sessionWin && sessionWin.focus(), 150); });
+  sessionWin.on('closed', () => { sessionWin = null; });
+  buildTray();
+  if (settingsWin) settingsWin.webContents.send('settings:changed');
+}
+
+function closeSessionWindow() {
+  allowSessionClose = true;
+  if (sessionWin) sessionWin.close();
+  velo.set('idle');
+  scheduler.finish();
+  store.profile.activeSec = 0;
+  store.saveProfile();
+  buildTray();
+  if (settingsWin) settingsWin.webContents.send('settings:changed');
+}
+
+function openSettings() {
+  if (settingsWin) { settingsWin.show(); settingsWin.focus(); return; }
+  settingsWin = new BrowserWindow({
+    width: 760, height: 760, title: 'Детектив Ошибкин — настройки', autoHideMenuBar: true,
+    backgroundColor: '#1d1a24', webPreferences: webPrefs(),
+  });
+  settingsWin.loadFile(path.join(RENDERER, 'settings.html'));
+  settingsWin.on('closed', () => { settingsWin = null; });
+}
+
+// ---------- трей ----------
+
+function trayIcon() {
+  const img = nativeImage.createFromPath(path.join(ROOT, 'build', 'tray.png'));
+  return img.isEmpty() ? nativeImage.createEmpty() : img;
+}
+
+function buildTray() {
+  if (!tray) {
+    tray = new Tray(trayIcon());
+    tray.setToolTip('Детектив Ошибкин');
+    tray.on('double-click', openSettings);
+  }
+  const items = [
+    { label: 'Открыть дело сейчас', enabled: !sessionWin, click: () => startNow() },
+    { label: 'Настройки и отчёт…', click: openSettings },
+    { type: 'separator' },
+  ];
+  if (sessionWin) items.push({ label: 'Прервать занятие (нужен PIN)…', click: () => openSettings() });
+  items.push({ label: 'Выход (нужен PIN)…', click: () => openSettings() });
+  tray.setContextMenu(Menu.buildFromTemplate(items));
+}
+
+// ---------- действия ребёнка ----------
+
+function readNow() {
+  if (scheduler.readNow()) openSessionWindow();
+}
+
+function postpone() {
+  if (scheduler.postpone()) {
+    hidePhone();
+    velo.set('idle');
+  }
+}
+
+function startNow() {
+  if (sessionWin) return;
+  scheduler.forceStart();
+  openSessionWindow();
+}
+
+// ---------- главный цикл ----------
+
+function onRing() {
+  if (store.profile.vacationPending) {
+    // «Отпуск»: занятие пропускается, телефон только поздравляет.
+    store.profile.vacationPending = false;
+    store.saveProfile();
+    scheduler.finish();
+    showPhone('vacation');
+    setTimeout(hidePhone, 8000);
+    return;
+  }
+  velo.set('warning');
+  showPhone('warning');
+}
+
+function loop() {
+  const now = Date.now();
+  const idleSec = powerMonitor.getSystemIdleTime();
+  const veloState = velo.readVelo(now);
+  const ev = scheduler.tick({ dt: 1, idleSec, date: new Date(now), velo: veloState });
+  if (ev.includes('ring')) onRing();
+  if (ev.includes('waitPause')) showPhone('waitPause');
+  if (ev.includes('final')) showPhone('final');
+  if (ev.includes('start')) openSessionWindow();
+  else if (ev.includes('countdown')) pushPhone(scheduler.state, false);
+  velo.tick(now);
+
+  if (now % 30000 < 1000) {
+    store.profile.activeSec = scheduler.activeSec;
+    store.saveProfile();
+  }
+  dailyReport(new Date(now));
+  if (appUpdates.maybeInstall) appUpdates.maybeInstall(idleSec);
+}
+
+function dailyReport(date) {
+  const s = store.settings;
+  const [h, m] = (s.dailyReportAt || '').split(':').map(Number);
+  if (!Number.isFinite(h)) return;
+  const day = dayKey(date);
+  if (store.profile.lastDailyReport === day) return;
+  if (date.getHours() * 60 + date.getMinutes() < h * 60 + (m || 0)) return;
+  store.profile.lastDailyReport = day;
+  store.saveProfile();
+  telegram.send(s.telegramToken, s.telegramChatId, telegram.dailyText(s.childName, store.profile.log, store.profile, content.rules, day));
+}
+
+async function checkUpdates() {
+  const r = await updater.updateContent(app.getPath('userData'), content);
+  if (r.updated) {
+    content = r.content;
+    log(`Банк заданий обновлён до версии ${content.version}`);
+  }
+  appUpdates.check();
+}
+
+// ---------- связь с окнами ----------
+
+function publicProfile() {
+  const p = store.profile;
+  return { coins: p.coins, total: p.total, stats: p.stats, drillIndex: p.drillIndex, lastCase: p.lastCase, vacationPending: p.vacationPending, cleanCases: p.cleanCases, sessions: p.sessions, log: (p.log || []).slice(-60) };
+}
+
+function registerIpc() {
+  ipcMain.on('phone:read', readNow);
+  ipcMain.on('phone:later', postpone);
+  ipcMain.on('phone:menu', (_e, open) => {
+    if (!phoneWin) return;
+    placePhone(open ? PHONE_MENU : PHONE);
+  });
+
+  ipcMain.handle('session:data', () => ({
+    content,
+    profile: publicProfile(),
+    settings: { maxTasks: store.settings.maxTasks, vacationPrice: store.settings.vacationPrice, childName: store.settings.childName, vacationsLeftToday: Math.max(0, store.settings.vacationsPerDay - store.vacationsToday()) },
+  }));
+  ipcMain.handle('session:task', (_e, r) => {
+    // Итог одного дела: { caseTitle, drillRule, coins, found, total, falseHits, statsAfter, reviewRules, clean }
+    const p = store.profile;
+    p.coins += r.coins; p.total += r.coins;
+    if (r.clean) p.cleanCases++;
+    p.stats = r.statsAfter || p.stats;
+    if (r.caseTitle) p.lastCase = r.caseTitle;
+    if (r.drillRule) p.drillIndex[r.drillRule] = (p.drillIndex[r.drillRule] || 0) + 1;
+    store.saveProfile();
+    Object.assign(session, {
+      tasks: session.tasks + 1, found: session.found + r.found, total: session.total + r.total,
+      coins: session.coins + r.coins, falseHits: session.falseHits + (r.falseHits || 0),
+    });
+    (r.reviewRules || []).forEach((x) => { if (!session.missedRules.includes(x)) session.missedRules.push(x); });
+    velo.set('session', r.reviewRules && r.reviewRules.length ? 'rule' : 'result');
+    return publicProfile();
+  });
+  ipcMain.handle('session:quiz', (_e, ok) => {
+    if (ok) { store.profile.coins += 5; store.profile.total += 5; session.coins += 5; store.saveProfile(); }
+    return publicProfile();
+  });
+  ipcMain.handle('session:vacation', () => {
+    const r = store.buyVacation();
+    if (r.ok) session.vacation = true;
+    return Object.assign(r, { profile: publicProfile() });
+  });
+  ipcMain.handle('session:end', (_e, { solved }) => {
+    const p = store.profile;
+    session.solved = !!solved;
+    session.minutes = Math.max(1, Math.round((Date.now() - session.started) / 60000));
+    p.sessions++;
+    p.log = (p.log || []).concat([{ day: dayKey(new Date()), minutes: session.minutes, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks }]).slice(-200);
+    store.saveProfile();
+    const s = store.settings;
+    if (s.reportEachSession) telegram.send(s.telegramToken, s.telegramChatId, telegram.sessionText(s.childName, session, p, content.rules));
+    closeSessionWindow();
+    return true;
+  });
+
+  // Окно настроек. Всё, что меняет настройки, требует PIN.
+  let unlocked = false;
+  ipcMain.handle('settings:state', () => ({ unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin, contentVersion: content.version, appVersion: app.getVersion(), rules: content.rules }));
+  ipcMain.handle('settings:unlock', (_e, pin) => (unlocked = store.checkPin(pin)));
+  const guard = (fn) => (...a) => { if (!(unlocked || !store.hasPin())) throw new Error('Нужен PIN'); return fn(...a); };
+  ipcMain.handle('settings:save', guard((_e, patch) => {
+    const s = store.saveSettings(patch);
+    scheduler.setSettings(schedulerSettings());
+    app.setLoginItemSettings({ openAtLogin: !!s.autostart });
+    return store.publicSettings();
+  }));
+  ipcMain.handle('settings:pin', guard((_e, pin) => { store.setPin(pin); unlocked = true; return true; }));
+  ipcMain.handle('settings:telegramTest', guard(() => telegram.send(store.settings.telegramToken, store.settings.telegramChatId, `Детектив Ошибкин на связи. Отчёты о занятиях (${store.settings.childName}) будут приходить сюда.`)));
+  ipcMain.handle('settings:stopSession', guard(() => { if (sessionWin) { session.minutes = 0; closeSessionWindow(); } return true; }));
+  ipcMain.handle('settings:startNow', guard(() => { startNow(); return true; }));
+  ipcMain.handle('settings:checkUpdates', guard(async () => { await checkUpdates(); return content.version; }));
+  ipcMain.handle('settings:resetProgress', guard(() => {
+    store.profile = JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
+    store.saveProfile();
+    return publicProfile();
+  }));
+  ipcMain.handle('settings:quit', guard(() => { allowSessionClose = true; app.exit(0); }));
+  ipcMain.on('settings:lock', () => { unlocked = false; });
+}
+
+// ---------- запуск ----------
+
+app.on('second-instance', openSettings);
+app.on('window-all-closed', () => {}); // живём в трее, без окон не выходим
+
+app.whenReady().then(() => {
+  if (process.platform === 'win32') app.setAppUserModelId('ru.gramma.oshibkin');
+  store = new Store(app.getPath('userData'));
+  content = updater.loadContent(app.getPath('userData'), path.join(ROOT, 'content', 'content.json'));
+  scheduler = new Scheduler(schedulerSettings(), { activeSec: store.profile.activeSec });
+  velo = new VeloLink();
+  velo.set('idle');
+  appUpdates = updater.setupAppUpdates(log, () => !!sessionWin || scheduler.state !== 'play');
+  if (!DEMO) app.setLoginItemSettings({ openAtLogin: !!store.settings.autostart });
+  registerIpc();
+  buildTray();
+  if (!store.hasPin()) openSettings(); // первый запуск: родитель задаёт PIN
+  setInterval(loop, 1000);
+  setTimeout(checkUpdates, 30 * 1000);
+  setInterval(checkUpdates, 6 * 3600 * 1000);
+  log(`Запущено. Банк заданий v${content.version}${DEMO ? ', демо-режим' : ''}`);
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  if (velo) velo.set('idle');
+});
