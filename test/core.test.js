@@ -54,7 +54,7 @@ test('pickCase предпочитает слабые правила и не по
 test('pickDrill идёт по кругу', () => {
   const a = core.pickDrill(content, { drillIndex: { parn: 0 } }, 'parn');
   const b = core.pickDrill(content, { drillIndex: { parn: 1 } }, 'parn');
-  const c = core.pickDrill(content, { drillIndex: { parn: 2 } }, 'parn');
+  const c = core.pickDrill(content, { drillIndex: { parn: content.drills.parn.length } }, 'parn');
   assert.notStrictEqual(a.text, b.text);
   assert.strictEqual(a.text, c.text);
   assert.strictEqual(core.pickDrill(content, {}, 'nope'), null);
@@ -100,4 +100,19 @@ test('rankOf', () => {
   assert.strictEqual(core.rankOf(299).next.n, 'Сыщик');
   assert.strictEqual(core.rankOf(1500).rank.n, 'Старший детектив');
   assert.strictEqual(core.rankOf(1500).next, null);
+});
+
+test('банк: нет повторов, в деле 2–4 ошибки, на каждое правило хватает коротких дел', () => {
+  const texts = content.cases.map((c) => c.text).concat(...Object.values(content.drills));
+  assert.strictEqual(new Set(texts).size, texts.length, 'тексты повторяются');
+  content.cases.forEach((c) => {
+    const n = core.errorsOf(c.text).length;
+    assert.ok(n >= 2 && n <= 4, `«${c.title}»: ошибок ${n}`);
+    assert.ok(c.title && c.intro, 'нужны название и вступление');
+  });
+  Object.keys(content.rules).forEach((r) => {
+    assert.ok((content.drills[r] || []).length >= 5, `мало коротких дел на «${r}»`);
+    (content.drills[r] || []).forEach((t) => core.errorsOf(t).forEach((e) => assert.strictEqual(e.rule, r, t)));
+  });
+  texts.forEach((t) => core.parse(t).filter((x) => x.t !== 'e').forEach((x) => assert.ok(!/[{}|]/.test(x.text), `сломанная разметка: ${t}`)));
 });
