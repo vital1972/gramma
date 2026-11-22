@@ -31,8 +31,13 @@ const SETTINGS_DEFAULTS = {
   quietFrom: '',
   quietTo: '',
   autostart: true,
+  reportChannel: 'telegram', // telegram | vk | max
   telegramToken: '',
   telegramChatId: '',
+  vkToken: '',
+  vkPeerId: '',
+  maxToken: '',
+  maxUserId: '',
   reportEachSession: true,
   dailyReportAt: '20:00',
   pinHash: '',

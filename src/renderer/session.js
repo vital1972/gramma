@@ -10,7 +10,7 @@
   const RULES = data.content.rules;
   const cfg = data.settings;
   let profile = data.profile;
-  const S = { n: 0, coins: 0, found: 0, total: 0, missedRules: [], started: Date.now() };
+  const S = { n: 0, coins: 0, found: 0, total: 0, missedRules: [], started: Date.now(), rankAtStart: core.rankOf(data.profile.total, data.profile.stats).rank.n };
 
   const ruleOf = (r) => RULES[r] || { name: r, villain: 'Безграмотный', rule: '', ex: '', quiz: null };
 
@@ -226,8 +226,10 @@
 
   // ---------- итог занятия ----------
   function showResult(solved) {
-    const { rank, next } = core.rankOf(profile.total);
-    const rankPct = next ? Math.round(((profile.total - rank.at) / (next.at - rank.at)) * 100) : 100;
+    const R = core.rankOf(profile.total, profile.stats);
+    const { rank, next } = R;
+    const rankPct = next ? Math.min(100, Math.round(((profile.total - rank.at) / (next.at - rank.at)) * 100)) : 100;
+    const promoted = rank.n !== S.rankAtStart;
     const price = cfg.vacationPrice;
     const vacPct = Math.min(100, Math.round((profile.coins / price) * 100));
     const mins = Math.max(1, Math.round((Date.now() - S.started) / 60000));
@@ -248,13 +250,14 @@
     card(`
       <div class="case-head"><h2>${solved ? 'Дело раскрыто!' : `На сегодня хватит, ${esc(cfg.childName || 'сыщик')}`}</h2><span class="pill">${esc(rank.n)}</span></div>
       <div class="det"><div class="ava">Д.О.</div><div class="say">${say}</div></div>
+      ${promoted ? `<div class="rule" style="text-align:center"><div class="villain">Приказ по управлению сыска</div><h3>Присвоено звание «${esc(rank.n)}»!</h3><div>Поздравляю, ${esc(cfg.childName || 'сыщик')}. Так держать!</div></div>` : ''}
       <div class="stats">
         <div class="stat"><div class="v">${S.found} из ${S.total}</div><div class="k">улик найдено</div></div>
         <div class="stat"><div class="v">+${S.coins}</div><div class="k">коинов за занятие</div></div>
         <div class="stat"><div class="v">${S.n}</div><div class="k">${S.n === 1 ? 'дело' : 'дела'} · около ${mins} мин</div></div>
       </div>
       <div class="stat"><div class="k" id="vacNote">${esc(vacNote)}</div><div class="meter"><i style="width:${vacPct}%"></i></div></div>
-      <div class="stat"><div class="k">${next ? `До звания «${esc(next.n)}»: ${next.at - profile.total} коинов` : 'Высшее звание получено'}</div><div class="meter"><i style="width:${rankPct}%"></i></div></div>
+      <div class="stat"><div class="k">${esc(core.needText(R))}</div><div class="meter"><i style="width:${rankPct}%"></i></div></div>
       <div><div class="lbl-small">Картотека преступников</div><div class="files">${chips}</div></div>
       <div class="actions">${canVac ? `<button class="btn-ghost" id="vac">Взять отпуск (−${price})</button>` : '<span></span>'}<button class="btn-main" id="back">Вернуться в игру</button></div>`);
     $('back').onclick = async () => { $('back').disabled = true; await api.invoke('session:end', { solved }); };

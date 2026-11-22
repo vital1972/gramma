@@ -115,7 +115,15 @@ test('rankOf', () => {
   assert.strictEqual(core.rankOf(0).rank.n, 'Стажёр');
   assert.strictEqual(core.rankOf(299).next.n, 'Сыщик');
   assert.strictEqual(core.rankOf(1500).rank.n, 'Старший детектив');
-  assert.strictEqual(core.rankOf(1500).next, null);
+  assert.strictEqual(core.rankOf(3000).rank.n, 'Инспектор угрозыска');
+  // Комиссар: мало коинов — нельзя, коины есть, но правил мало — тоже нельзя.
+  assert.strictEqual(core.rankOf(12000, {}).rank.n, 'Полковник сыска');
+  const strong = {};
+  ['a', 'b', 'c', 'd', 'e', 'f', 'g'].forEach((r) => { strong[r] = { ok: 6, miss: 1 }; });
+  assert.strictEqual(core.rankOf(12000, strong).rank.n, 'Комиссар');
+  assert.strictEqual(core.rankOf(30000, strong).rank.n, 'Комиссар');
+  assert.match(core.needText(core.rankOf(30000, strong)), /ещё 3 правила/);
+  assert.strictEqual(core.rankOf(1500).need.coins, 1500);
 });
 
 test('банк: нет повторов, в деле 2–4 ошибки, на каждое правило хватает коротких дел', () => {

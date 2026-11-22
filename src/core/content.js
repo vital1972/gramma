@@ -106,17 +106,38 @@
   }
 
   // Звание по сумме заработанных коинов.
+  // Звания: коины за всё время, а для двух высших ещё и уверенно пойманные правила.
   const RANKS = [
     { n: 'Стажёр', at: 0 },
     { n: 'Сыщик', at: 300 },
     { n: 'Инспектор', at: 800 },
     { n: 'Старший детектив', at: 1500 },
+    { n: 'Инспектор угрозыска', at: 3000 },
+    { n: 'Майор сыска', at: 5000 },
+    { n: 'Полковник сыска', at: 8000 },
+    { n: 'Комиссар', at: 12000, rules: 7 },
+    { n: 'Легенда сыска', at: 18000, rules: 10 },
   ];
-  function rankOf(total) {
-    let r = RANKS[0];
-    RANKS.forEach((x) => { if (total >= x.at) r = x; });
-    const next = RANKS.find((x) => x.at > total) || null;
-    return { rank: r, next };
+  // Правило поймано уверенно: без ошибки не меньше 5 раз и ошибок меньше, чем верных.
+  function masteredRules(stats) {
+    return Object.keys(stats || {}).filter((r) => stats[r].ok >= 5 && stats[r].miss < stats[r].ok).length;
+  }
+  function rankOf(total, stats) {
+    const m = masteredRules(stats);
+    const ok = (x) => total >= x.at && m >= (x.rules || 0);
+    let i = 0;
+    RANKS.forEach((x, k) => { if (ok(x) && k === i + 1) i = k; });
+    const next = RANKS[i + 1] || null;
+    const need = next ? { coins: Math.max(0, next.at - total), rules: Math.max(0, (next.rules || 0) - m) } : null;
+    return { rank: RANKS[i], next, need, mastered: m };
+  }
+  // Что осталось до следующего звания, по-человечески.
+  function needText(r) {
+    if (!r.next) return 'Высшее звание получено';
+    const parts = [];
+    if (r.need.coins) parts.push(`${r.need.coins} коинов`);
+    if (r.need.rules) parts.push(`уверенно поймать ещё ${r.need.rules} ${r.need.rules === 1 ? 'правило' : r.need.rules < 5 ? 'правила' : 'правил'}`);
+    return `До звания «${r.next.n}»: ${parts.join(' и ')}`;
   }
 
   // Подсчёт итогов одного дела. tokens — результат parse() со статусами ошибок.
@@ -153,7 +174,7 @@
     return s;
   }
 
-  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, rememberCase, pickDrill, rankOf, scoreTask, applyStats, RANKS };
+  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, rememberCase, pickDrill, rankOf, needText, masteredRules, scoreTask, applyStats, RANKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OshibkinCore = api;
 })(typeof self !== 'undefined' ? self : this);

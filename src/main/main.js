@@ -2,13 +2,14 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, powerMonitor, screen, nativeImage } = require('electron');
+const { app, net, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, powerMonitor, screen, nativeImage } = require('electron');
 const { Store, dayKey, PROFILE_DEFAULTS } = require('./store');
 const { Scheduler } = require('../core/scheduler');
 const core = require('../core/content');
 const english = require('../core/english');
 const { VeloLink } = require('./velo');
 const telegram = require('./telegram');
+const notify = require('./notify');
 const updater = require('./updater');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -247,13 +248,17 @@ function loop() {
   if (appUpdates.maybeInstall) appUpdates.maybeInstall(idleSec);
 }
 
-// Отправка в Telegram с записью результата: его видно в окне родителя и в журнале.
+// Сетевые запросы через Chromium: берёт сертификаты и прокси из Windows (нужно для MAX).
+const netFetch = (url, opts) => net.fetch(url, opts);
+
+// Отправка отчёта с записью результата: его видно в окне родителя и в журнале.
 async function report(kind, text) {
   const s = store.settings;
-  const r = await telegram.send(s.telegramToken, s.telegramChatId, text);
-  store.profile.lastReport = { kind, at: new Date().toISOString(), ok: !!r.ok, why: r.why || '' };
+  const r = await notify.send(s, text, netFetch);
+  const via = notify.CHANNELS[notify.channelOf(s)];
+  store.profile.lastReport = { kind, via, at: new Date().toISOString(), ok: !!r.ok, why: r.why || '' };
   store.saveProfile();
-  log(`Telegram (${kind}): ${r.ok ? 'отправлено' : 'ошибка: ' + r.why}`);
+  log(`Отчёт ${via} (${kind}): ${r.ok ? 'отправлено' : 'ошибка: ' + r.why}`);
   if (settingsWin) settingsWin.webContents.send('settings:changed');
   return r;
 }
@@ -434,6 +439,12 @@ function registerIpc() {
     return store.publicSettings();
   }));
   ipcMain.handle('settings:pin', guard((_e, pin) => { store.setPin(pin); unlocked = true; return true; }));
+  ipcMain.handle('settings:findChat', guard(async () => {
+    const s = store.settings;
+    const r = await notify.findChat(s, netFetch);
+    if (r.ok) store.saveSettings(notify.channelOf(s) === 'vk' ? { vkPeerId: r.id } : { maxUserId: r.id });
+    return Object.assign(r, { settings: store.publicSettings() });
+  }));
   ipcMain.handle('settings:telegramTest', guard(() => report('проверка', `Детектив Ошибкин на связи. Отчёты о занятиях (${store.settings.childName}) будут приходить сюда.`)));
   ipcMain.handle('settings:stopSession', guard(() => { if (sessionWin) { session.minutes = 0; closeSessionWindow(); } return true; }));
   ipcMain.handle('settings:startNow', guard((_e, subject) => { startNow(subject); return true; }));

@@ -6,7 +6,7 @@
   const $ = (id) => document.getElementById(id);
   const NUM = ['intervalMin', 'maxTasks', 'warnSec', 'postponeSec', 'postponeLimit', 'idleStartSec', 'maxWaitPauseSec', 'vacationPrice', 'vacationsPerDay',
     'ratioRu', 'ratioEn', 'weekendRatioRu', 'weekendRatioEn', 'enMaxTasks', 'enNewWords', 'speechRate'];
-  const TEXT = ['childName', 'quietFrom', 'quietTo', 'telegramToken', 'telegramChatId', 'dailyReportAt', 'subjectMode', 'firstSubject'];
+  const TEXT = ['childName', 'quietFrom', 'quietTo', 'reportChannel', 'telegramToken', 'telegramChatId', 'vkToken', 'vkPeerId', 'maxToken', 'maxUserId', 'dailyReportAt', 'subjectMode', 'firstSubject'];
   const BOOL = ['reportEachSession', 'autostart', 'voiceOn'];
   const TIME = ['quietFrom', 'quietTo', 'dailyReportAt'];
   let state = null;
@@ -56,22 +56,24 @@
       : 'Английский банк заданий не загрузился, все занятия по русскому.';
     const lr = state.profile.lastReport;
     $('tgLast').textContent = lr
-      ? `Последняя отправка (${lr.kind}): ${new Date(lr.at).toLocaleString('ru-RU')} — ${lr.ok ? 'доставлено' : 'ошибка: ' + lr.why}`
-      : 'Отчётов в Telegram ещё не отправлялось.';
+      ? `Последняя отправка${lr.via ? ' в ' + lr.via : ''} (${lr.kind}): ${new Date(lr.at).toLocaleString('ru-RU')} — ${lr.ok ? 'доставлено' : 'ошибка: ' + lr.why}`
+      : 'Отчётов ещё не отправлялось.';
+    showChannel();
     $('logPath').textContent = `Журнал работы программы: ${state.logFile}`;
     report();
   }
 
   function report() {
     const p = state.profile;
-    const { rank, next } = core.rankOf(p.total);
+    const R = core.rankOf(p.total, p.stats);
+    const { rank, next } = R;
     const log = (p.log || []).slice(-60);
     const today = log.length ? log[log.length - 1].day : '';
     const sum = (arr, k) => arr.reduce((a, x) => a + (x[k] || 0), 0);
     const t = log.filter((x) => x.day === today);
     $('stats').innerHTML = '';
     [
-      [rank.n, next ? `звание · до «${next.n}» ${next.at - p.total}` : 'звание'],
+      [rank.n, `звание · ${core.needText(R)} · правил поймано уверенно: ${R.mastered} из 10`],
       [p.coins, 'коинов в копилке'],
       [p.sessions, 'занятий всего'],
       [p.cleanCases, 'дел без единой ошибки'],
@@ -203,12 +205,38 @@
     }
   };
 
+  // Показываем поля только выбранного канала.
+  function showChannel() {
+    const ch = $('reportChannel').value || 'telegram';
+    document.querySelectorAll('[data-ch]').forEach((el) => { el.hidden = !el.dataset.ch.split(' ').includes(ch); });
+    $('findHelp').textContent = ch === 'vk'
+      ? 'Сначала напишите сообществу любое сообщение из своего ВК.'
+      : 'Сначала напишите боту любое сообщение в MAX.';
+  }
+  $('reportChannel').onchange = showChannel;
+
+  $('findChat').onclick = async () => {
+    try {
+      await save();
+      say('tgToast', 'Ищу…');
+      const r = await api.invoke('settings:findChat');
+      if (r.ok) {
+        state.settings = r.settings;
+        $('vkPeerId').value = r.settings.vkPeerId || '';
+        $('maxUserId').value = r.settings.maxUserId || '';
+        say('tgToast', `Нашёл: ${r.name}. Теперь нажмите «Отправить проверочное сообщение».`, 'good');
+      } else say('tgToast', r.why, 'bad');
+    } catch (e) {
+      say('tgToast', e.message, 'bad');
+    }
+  };
+
   $('tgTest').onclick = async () => {
     try {
       await save();
       say('tgToast', 'Отправляю…');
       const r = await api.invoke('settings:telegramTest');
-      say('tgToast', r.ok ? 'Сообщение отправлено, проверьте Telegram' : r.why, r.ok ? 'good' : 'bad');
+      say('tgToast', r.ok ? 'Сообщение отправлено, проверьте телефон' : r.why, r.ok ? 'good' : 'bad');
     } catch (e) {
       say('tgToast', e.message, 'bad');
     }

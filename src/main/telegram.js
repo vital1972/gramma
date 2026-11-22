@@ -29,7 +29,7 @@ function weakRules(stats, rules) {
 }
 
 function sessionText(name, s, profile, rules) {
-  const rank = core.rankOf(profile.total).rank.n;
+  const rank = core.rankOf(profile.total, profile.stats).rank.n;
   const lines = [
     `${name}: ${s.solved ? 'дело раскрыто' : 'занятие окончено'} за ${s.minutes} мин.`,
     `Дел: ${s.tasks}, улик найдено ${s.found} из ${s.total}, ошибочных обвинений ${s.falseHits}.`,
