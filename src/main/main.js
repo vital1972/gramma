@@ -1,9 +1,11 @@
 // Детектив Ошибкин — фоновая программа в трее Windows.
 'use strict';
 const path = require('path');
+const fs = require('fs');
 const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, powerMonitor, screen, nativeImage } = require('electron');
 const { Store, dayKey, PROFILE_DEFAULTS } = require('./store');
 const { Scheduler } = require('../core/scheduler');
+const core = require('../core/content');
 const { VeloLink } = require('./velo');
 const telegram = require('./telegram');
 const updater = require('./updater');
@@ -31,8 +33,15 @@ let session = null; // итоги текущего занятия
 let hotkeys = false;
 
 function log(msg) {
+  const line = `${new Date().toISOString()} ${msg}`;
   // eslint-disable-next-line no-console
-  console.log(new Date().toISOString(), msg);
+  console.log(line);
+  // Журнал на диске, чтобы разбирать проблемы на компьютере ребёнка.
+  try {
+    const file = path.join(app.getPath('userData'), 'oshibkin.log');
+    if (fs.existsSync(file) && fs.statSync(file).size > 512 * 1024) fs.renameSync(file, file + '.old');
+    fs.appendFileSync(file, line + '\n');
+  } catch (e) { /* журнал не важнее работы */ }
 }
 
 function schedulerSettings() {
@@ -105,6 +114,7 @@ function unregisterHotkeys() {
 function openSessionWindow() {
   hidePhone();
   velo.set('session', 'task');
+  log('Занятие началось');
   session = { started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false };
   allowSessionClose = false;
   sessionWin = new BrowserWindow({
@@ -154,7 +164,7 @@ function trayIcon() {
 function buildTray() {
   if (!tray) {
     tray = new Tray(trayIcon());
-    tray.setToolTip('Детектив Ошибкин');
+    tray.setToolTip(`Детектив Ошибкин ${app.getVersion()}`);
     tray.on('double-click', openSettings);
   }
   const items = [
@@ -222,6 +232,17 @@ function loop() {
   if (appUpdates.maybeInstall) appUpdates.maybeInstall(idleSec);
 }
 
+// Отправка в Telegram с записью результата: его видно в окне родителя и в журнале.
+async function report(kind, text) {
+  const s = store.settings;
+  const r = await telegram.send(s.telegramToken, s.telegramChatId, text);
+  store.profile.lastReport = { kind, at: new Date().toISOString(), ok: !!r.ok, why: r.why || '' };
+  store.saveProfile();
+  log(`Telegram (${kind}): ${r.ok ? 'отправлено' : 'ошибка: ' + r.why}`);
+  if (settingsWin) settingsWin.webContents.send('settings:changed');
+  return r;
+}
+
 function dailyReport(date) {
   const s = store.settings;
   const [h, m] = (s.dailyReportAt || '').split(':').map(Number);
@@ -231,7 +252,7 @@ function dailyReport(date) {
   if (date.getHours() * 60 + date.getMinutes() < h * 60 + (m || 0)) return;
   store.profile.lastDailyReport = day;
   store.saveProfile();
-  telegram.send(s.telegramToken, s.telegramChatId, telegram.dailyText(s.childName, store.profile.log, store.profile, content.rules, day));
+  report('итог дня', telegram.dailyText(s.childName, store.profile.log, store.profile, content.rules, day));
 }
 
 async function checkUpdates() {
@@ -239,6 +260,8 @@ async function checkUpdates() {
   if (r.updated) {
     content = r.content;
     log(`Банк заданий обновлён до версии ${content.version}`);
+  } else if (r.why !== 'уже последняя версия') {
+    log(`Банк заданий не обновлён: ${r.why}`);
   }
   appUpdates.check();
 }
@@ -247,7 +270,7 @@ async function checkUpdates() {
 
 function publicProfile() {
   const p = store.profile;
-  return { coins: p.coins, total: p.total, stats: p.stats, drillIndex: p.drillIndex, lastCase: p.lastCase, vacationPending: p.vacationPending, cleanCases: p.cleanCases, sessions: p.sessions, log: (p.log || []).slice(-60) };
+  return { coins: p.coins, total: p.total, stats: p.stats, drillIndex: p.drillIndex, lastCase: p.lastCase, seenCases: p.seenCases || [], lastReport: p.lastReport || null, vacationPending: p.vacationPending, cleanCases: p.cleanCases, sessions: p.sessions, log: (p.log || []).slice(-60) };
 }
 
 function registerIpc() {
@@ -269,7 +292,10 @@ function registerIpc() {
     p.coins += r.coins; p.total += r.coins;
     if (r.clean) p.cleanCases++;
     p.stats = r.statsAfter || p.stats;
-    if (r.caseTitle) p.lastCase = r.caseTitle;
+    if (r.caseTitle) {
+      p.lastCase = r.caseTitle;
+      p.seenCases = core.rememberCase(p.seenCases, r.caseTitle);
+    }
     if (r.drillRule) p.drillIndex[r.drillRule] = (p.drillIndex[r.drillRule] || 0) + 1;
     store.saveProfile();
     Object.assign(session, {
@@ -296,15 +322,17 @@ function registerIpc() {
     p.sessions++;
     p.log = (p.log || []).concat([{ day: dayKey(new Date()), minutes: session.minutes, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks }]).slice(-200);
     store.saveProfile();
+    log(`Занятие окончено: дел ${session.tasks}, улик ${session.found} из ${session.total}`);
     const s = store.settings;
-    if (s.reportEachSession) telegram.send(s.telegramToken, s.telegramChatId, telegram.sessionText(s.childName, session, p, content.rules));
+    if (s.reportEachSession) report('занятие', telegram.sessionText(s.childName, session, p, content.rules));
+    else log('Отчёт после занятия выключен в настройках');
     closeSessionWindow();
     return true;
   });
 
   // Окно настроек. Всё, что меняет настройки, требует PIN.
   let unlocked = false;
-  ipcMain.handle('settings:state', () => ({ unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin, contentVersion: content.version, appVersion: app.getVersion(), rules: content.rules }));
+  ipcMain.handle('settings:state', () => ({ unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin, contentVersion: content.version, casesTotal: content.cases.length, logFile: path.join(app.getPath('userData'), 'oshibkin.log'), appVersion: app.getVersion(), rules: content.rules }));
   ipcMain.handle('settings:unlock', (_e, pin) => (unlocked = store.checkPin(pin)));
   const guard = (fn) => (...a) => { if (!(unlocked || !store.hasPin())) throw new Error('Нужен PIN'); return fn(...a); };
   ipcMain.handle('settings:save', guard((_e, patch) => {
@@ -314,7 +342,7 @@ function registerIpc() {
     return store.publicSettings();
   }));
   ipcMain.handle('settings:pin', guard((_e, pin) => { store.setPin(pin); unlocked = true; return true; }));
-  ipcMain.handle('settings:telegramTest', guard(() => telegram.send(store.settings.telegramToken, store.settings.telegramChatId, `Детектив Ошибкин на связи. Отчёты о занятиях (${store.settings.childName}) будут приходить сюда.`)));
+  ipcMain.handle('settings:telegramTest', guard(() => report('проверка', `Детектив Ошибкин на связи. Отчёты о занятиях (${store.settings.childName}) будут приходить сюда.`)));
   ipcMain.handle('settings:stopSession', guard(() => { if (sessionWin) { session.minutes = 0; closeSessionWindow(); } return true; }));
   ipcMain.handle('settings:startNow', guard(() => { startNow(); return true; }));
   ipcMain.handle('settings:checkUpdates', guard(async () => { await checkUpdates(); return content.version; }));

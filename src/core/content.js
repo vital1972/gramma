@@ -69,17 +69,32 @@
     return Math.max(0.3, w);
   }
 
-  // Первое дело занятия: смешанное, с самыми «слабыми» правилами, не повторяя последнее.
+  // Первое дело занятия. Дела не повторяются, пока не пройдены все (кроме трёх последних
+  // запасных); среди непройденных чаще выпадают дела со «слабыми» правилами.
   function pickCase(content, profile, rnd) {
     const random = rnd || Math.random;
     const cases = content.cases;
+    const stats = profile && profile.stats;
     const last = profile && profile.lastCase;
-    const scored = cases.map((c, i) => {
-      const w = errorsOf(c.text).reduce((s, e) => s + ruleWeight(profile && profile.stats, e.rule), 0);
-      return { i, w: c.title === last && cases.length > 1 ? 0 : w + random() * 0.5 };
-    });
-    scored.sort((a, b) => b.w - a.w);
-    return cases[scored[0].i];
+    const seen = (profile && profile.seenCases) || [];
+    const keep = Math.min(seen.length, Math.max(0, cases.length - 3));
+    const recent = new Set(keep ? seen.slice(-keep) : []);
+    if (last && cases.length > 1) recent.add(last);
+    let pool = cases.filter((c) => !recent.has(c.title));
+    if (!pool.length) pool = cases.filter((c) => c.title !== last);
+    if (!pool.length) pool = cases;
+    const w = pool.map((c) => errorsOf(c.text).reduce((s, e) => s + ruleWeight(stats, e.rule), 0));
+    let r = random() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) {
+      r -= w[i];
+      if (r < 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+
+  // Учёт пройденных дел: последние не больше 200 названий.
+  function rememberCase(seen, title) {
+    return (seen || []).filter((t) => t !== title).concat([title]).slice(-200);
   }
 
   // Короткое дело на одно правило, по кругу.
@@ -138,7 +153,7 @@
     return s;
   }
 
-  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, pickDrill, rankOf, scoreTask, applyStats, RANKS };
+  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, rememberCase, pickDrill, rankOf, scoreTask, applyStats, RANKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OshibkinCore = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -36,6 +36,8 @@ const PROFILE_DEFAULTS = {
   stats: {}, // { правило: { ok, miss } }
   drillIndex: {},
   lastCase: null,
+  seenCases: [], // пройденные дела, чтобы не повторять
+  lastReport: null, // последняя отправка в Telegram
   vacationsUsed: {}, // { 'ГГГГ-ММ-ДД': число }
   vacationPending: false,
   activeSec: 0,
@@ -45,9 +47,9 @@ const PROFILE_DEFAULTS = {
 
 function readJson(file, defaults) {
   try {
-    return Object.assign({}, defaults, JSON.parse(fs.readFileSync(file, 'utf8')));
+    return Object.assign(JSON.parse(JSON.stringify(defaults)), JSON.parse(fs.readFileSync(file, 'utf8')));
   } catch (e) {
-    return Object.assign({}, defaults);
+    return JSON.parse(JSON.stringify(defaults));
   }
 }
 

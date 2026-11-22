@@ -43,12 +43,28 @@ test('validate находит неизвестное правило и пуст�
   assert.ok(p.some((s) => s.includes('нет ни одной ошибки')));
 });
 
-test('pickCase предпочитает слабые правила и не повторяет последнее дело', () => {
-  const profile = { stats: { capital: { ok: 0, miss: 5 } }, lastCase: null };
-  const c = core.pickCase(content, profile, () => 0);
-  assert.ok(core.errorsOf(c.text).some((e) => e.rule === 'capital'));
-  const again = core.pickCase(content, Object.assign({}, profile, { lastCase: c.title }), () => 0);
-  assert.notStrictEqual(again.title, c.title);
+test('pickCase не повторяет дела, пока не пройдены почти все', () => {
+  let profile = { stats: {}, lastCase: null, seenCases: [] };
+  const titles = [];
+  for (let i = 0; i < content.cases.length - 3; i++) {
+    const c = core.pickCase(content, profile);
+    titles.push(c.title);
+    profile = Object.assign({}, profile, { lastCase: c.title, seenCases: core.rememberCase(profile.seenCases, c.title) });
+  }
+  assert.strictEqual(new Set(titles).size, titles.length, 'дело повторилось раньше времени');
+  const next = core.pickCase(content, profile);
+  assert.notStrictEqual(next.title, profile.lastCase);
+});
+
+test('pickCase чаще даёт дела со слабыми правилами', () => {
+  const profile = { stats: { capital: { ok: 0, miss: 5 } }, seenCases: [] };
+  const hasCap = (c) => core.errorsOf(c.text).some((e) => e.rule === 'capital');
+  const share = content.cases.filter(hasCap).length / content.cases.length;
+  let hits = 0;
+  let seed = 1;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < 2000; i++) if (hasCap(core.pickCase(content, profile, rnd))) hits++;
+  assert.ok(hits / 2000 > share + 0.1, `доля ${hits / 2000} при базовой ${share}`);
 });
 
 test('pickDrill идёт по кругу', () => {

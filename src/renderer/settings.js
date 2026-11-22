@@ -48,6 +48,11 @@
     $('ver').textContent = `Программа ${state.appVersion} · задания v${state.contentVersion}${state.inSession ? ' · идёт занятие' : ''}`;
     $('stopSession').disabled = !state.inSession;
     $('startNow').disabled = state.inSession;
+    const lr = state.profile.lastReport;
+    $('tgLast').textContent = lr
+      ? `Последняя отправка (${lr.kind}): ${new Date(lr.at).toLocaleString('ru-RU')} — ${lr.ok ? 'доставлено' : 'ошибка: ' + lr.why}`
+      : 'Отчётов в Telegram ещё не отправлялось.';
+    $('logPath').textContent = `Журнал работы программы: ${state.logFile}`;
     report();
   }
 
@@ -65,6 +70,7 @@
       [p.sessions, 'занятий всего'],
       [p.cleanCases, 'дел без единой ошибки'],
       [t.length ? `${sum(t, 'found')} из ${sum(t, 'total')}` : '—', 'улик за последний день'],
+      [`${(p.seenCases || []).length} из ${state.casesTotal}`, `дел пройдено (банк v${state.contentVersion})`],
       [p.vacationPending ? 'да' : 'нет', 'отпуск ждёт'],
     ].forEach(([v, k]) => {
       const d = document.createElement('div');
