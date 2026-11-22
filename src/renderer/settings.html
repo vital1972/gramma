@@ -57,7 +57,13 @@
         <h2>Отчёт</h2>
         <div class="stats" id="stats"></div>
         <div><div class="help" style="margin-bottom:6px">Правила (красные — даются чаще)</div><div class="files" id="chips"></div></div>
-        <table><thead><tr><th>День</th><th>Дел</th><th>Улик найдено</th><th>Коинов</th><th>Минут</th></tr></thead><tbody id="log"></tbody></table>
+        <table><thead><tr><th>День</th><th>Русский</th><th>Англ.</th><th>Улик найдено</th><th>Слов верно</th><th>Коинов</th><th>Минут</th></tr></thead><tbody id="log"></tbody></table>
+      </section>
+
+      <section id="enReport" hidden>
+        <h2>Английский: дело Интерпола</h2>
+        <div class="stats" id="enStats"></div>
+        <div><div class="help" style="margin-bottom:6px">Бандиты-правила (красные — даются чаще)</div><div class="files" id="enChips"></div></div>
       </section>
 
       <section>
@@ -75,6 +81,24 @@
           <label class="field">до (ЧЧ:ММ)<input id="quietTo" placeholder="например 08:00"></label>
         </div>
         <p class="help">Через «Ждать паузу не дольше» занятие начнётся, даже если ребёнок не отпускает мышь: перед этим 10 секунд обратного отсчёта на телефоне.</p>
+      </section>
+
+      <section>
+        <h2>Предметы</h2>
+        <div class="grid">
+          <label class="field">Какие занятия<select id="subjectMode"><option value="mix">Чередовать русский и английский</option><option value="ru">Только русский</option><option value="en">Только английский</option></select></label>
+          <label class="field">Первое занятие дня<select id="firstSubject"><option value="ru">Русский</option><option value="en">Английский</option><option value="alt">По очереди через день</option></select></label>
+          <label class="field">Русских занятий подряд<input id="ratioRu" type="number" min="0" max="5"></label>
+          <label class="field">Английских занятий подряд<input id="ratioEn" type="number" min="0" max="5"></label>
+          <label class="field">На выходных: русских (0 — как в будни)<input id="weekendRatioRu" type="number" min="0" max="5"></label>
+          <label class="field">На выходных: английских<input id="weekendRatioEn" type="number" min="0" max="5"></label>
+          <label class="field">Записок в английском занятии, не больше<select id="enMaxTasks"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="field">Новых слов за занятие<select id="enNewWords"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <label class="field">Скорость английской речи<select id="speechRate"><option value="0.7">Медленно</option><option value="0.85">Чуть медленнее обычного</option><option value="1">Обычно</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="voiceOn"> Озвучивать английские слова (голос Windows)</label>
+        <p class="help" id="nextSubj"></p>
+        <p class="help">Пример: 2 русских и 1 английское — значит два занятия по русскому, потом одно по английскому, и так по кругу. Очередь начинается заново каждый день. Если английского голоса нет: Параметры Windows → Время и язык → Речь → Добавить голоса → English (United States).</p>
       </section>
 
       <section>
@@ -108,7 +132,9 @@
           <span class="toast" id="saveToast"></span>
         </div>
         <div class="row">
-          <button class="btn-ghost" id="startNow">Открыть дело сейчас</button>
+          <button class="btn-ghost" id="startNow">Открыть дело сейчас (по очереди)</button>
+          <button class="btn-ghost" id="startRu">Русское дело сейчас</button>
+          <button class="btn-ghost" id="startEn">Дело Интерпола сейчас</button>
           <button class="btn-ghost" id="stopSession">Прервать занятие</button>
           <button class="btn-ghost" id="checkUpdates">Проверить обновления</button>
           <span class="toast" id="actToast"></span>

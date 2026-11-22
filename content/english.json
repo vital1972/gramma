@@ -1,0 +1,1731 @@
+{
+ "version": 1,
+ "note": "Английский для Детектива Ошибкина: главы по модулям Spotlight 4. Разметка ошибки: {неправильно|правильно:правило:ложный_вариант}. Увеличивайте version при каждом изменении.",
+ "chapters": [
+  {
+   "id": "london",
+   "city": "Лондон",
+   "mark": "🎡",
+   "topic": "Рабочий день: профессии и места",
+   "rule": "ps3",
+   "clues": 5,
+   "words": [
+    "doctor",
+    "nurse",
+    "vet",
+    "pilot",
+    "policeman",
+    "fireman",
+    "postman",
+    "baker",
+    "bakery",
+    "hospital",
+    "farm",
+    "cafe",
+    "bus",
+    "clock",
+    "letter",
+    "night"
+   ]
+  },
+  {
+   "id": "newyork",
+   "city": "Нью-Йорк",
+   "mark": "🗽",
+   "topic": "Вкусности: еда",
+   "rule": "plural",
+   "clues": 5,
+   "words": [
+    "cake",
+    "milk",
+    "cheese",
+    "bread",
+    "fish",
+    "apple",
+    "banana",
+    "egg",
+    "tomato",
+    "meat",
+    "juice",
+    "pizza",
+    "chocolate",
+    "lemon",
+    "ice cream",
+    "sweets"
+   ]
+  },
+  {
+   "id": "sydney",
+   "city": "Сидней",
+   "mark": "🦘",
+   "topic": "В зоопарке: животные",
+   "rule": "ing",
+   "clues": 5,
+   "words": [
+    "elephant",
+    "giraffe",
+    "monkey",
+    "crocodile",
+    "kangaroo",
+    "penguin",
+    "dolphin",
+    "lion",
+    "tiger",
+    "snake",
+    "tree",
+    "swim",
+    "jump",
+    "run",
+    "sleep",
+    "eat"
+   ]
+  },
+  {
+   "id": "dublin",
+   "city": "Дублин",
+   "mark": "☘️",
+   "topic": "Семья и друзья",
+   "rule": "have",
+   "clues": 5,
+   "words": [
+    "mother",
+    "father",
+    "sister",
+    "brother",
+    "grandma",
+    "grandpa",
+    "baby",
+    "friend",
+    "cat",
+    "dog",
+    "bike",
+    "ball",
+    "house",
+    "eyes",
+    "hair",
+    "key"
+   ]
+  },
+  {
+   "id": "toronto",
+   "city": "Торонто",
+   "mark": "🍁",
+   "topic": "Где ты был вчера: чувства и места",
+   "rule": "be",
+   "clues": 5,
+   "words": [
+    "happy",
+    "sad",
+    "tired",
+    "hungry",
+    "thirsty",
+    "scared",
+    "party",
+    "birthday",
+    "present",
+    "park",
+    "school",
+    "library",
+    "museum",
+    "zoo",
+    "money",
+    "map"
+   ]
+  }
+ ],
+ "words": {
+  "doctor": {
+   "ru": "врач",
+   "e": "🩺"
+  },
+  "nurse": {
+   "ru": "медсестра",
+   "e": "💉"
+  },
+  "vet": {
+   "ru": "ветеринар",
+   "e": "🐕"
+  },
+  "pilot": {
+   "ru": "пилот",
+   "e": "✈️"
+  },
+  "policeman": {
+   "ru": "полицейский",
+   "e": "👮"
+  },
+  "fireman": {
+   "ru": "пожарный",
+   "e": "🚒"
+  },
+  "postman": {
+   "ru": "почтальон",
+   "e": "📮"
+  },
+  "baker": {
+   "ru": "пекарь",
+   "e": "🥖"
+  },
+  "bakery": {
+   "ru": "пекарня",
+   "e": "🥐"
+  },
+  "hospital": {
+   "ru": "больница",
+   "e": "🏥"
+  },
+  "farm": {
+   "ru": "ферма",
+   "e": "🚜"
+  },
+  "cafe": {
+   "ru": "кафе",
+   "e": "☕"
+  },
+  "bus": {
+   "ru": "автобус",
+   "e": "🚌"
+  },
+  "clock": {
+   "ru": "часы",
+   "e": "⏰"
+  },
+  "letter": {
+   "ru": "письмо",
+   "e": "✉️"
+  },
+  "night": {
+   "ru": "ночь",
+   "e": "🌙"
+  },
+  "cake": {
+   "ru": "торт",
+   "e": "🎂"
+  },
+  "milk": {
+   "ru": "молоко",
+   "e": "🥛"
+  },
+  "cheese": {
+   "ru": "сыр",
+   "e": "🧀"
+  },
+  "bread": {
+   "ru": "хлеб",
+   "e": "🍞"
+  },
+  "fish": {
+   "ru": "рыба",
+   "e": "🐟"
+  },
+  "apple": {
+   "ru": "яблоко",
+   "e": "🍎"
+  },
+  "banana": {
+   "ru": "банан",
+   "e": "🍌"
+  },
+  "egg": {
+   "ru": "яйцо",
+   "e": "🥚"
+  },
+  "tomato": {
+   "ru": "помидор",
+   "e": "🍅"
+  },
+  "meat": {
+   "ru": "мясо",
+   "e": "🥩"
+  },
+  "juice": {
+   "ru": "сок",
+   "e": "🧃"
+  },
+  "pizza": {
+   "ru": "пицца",
+   "e": "🍕"
+  },
+  "chocolate": {
+   "ru": "шоколад",
+   "e": "🍫"
+  },
+  "lemon": {
+   "ru": "лимон",
+   "e": "🍋"
+  },
+  "ice cream": {
+   "ru": "мороженое",
+   "e": "🍦"
+  },
+  "sweets": {
+   "ru": "конфеты",
+   "e": "🍬"
+  },
+  "elephant": {
+   "ru": "слон",
+   "e": "🐘"
+  },
+  "giraffe": {
+   "ru": "жираф",
+   "e": "🦒"
+  },
+  "monkey": {
+   "ru": "обезьяна",
+   "e": "🐒"
+  },
+  "crocodile": {
+   "ru": "крокодил",
+   "e": "🐊"
+  },
+  "kangaroo": {
+   "ru": "кенгуру",
+   "e": "🦘"
+  },
+  "penguin": {
+   "ru": "пингвин",
+   "e": "🐧"
+  },
+  "dolphin": {
+   "ru": "дельфин",
+   "e": "🐬"
+  },
+  "lion": {
+   "ru": "лев",
+   "e": "🦁"
+  },
+  "tiger": {
+   "ru": "тигр",
+   "e": "🐯"
+  },
+  "snake": {
+   "ru": "змея",
+   "e": "🐍"
+  },
+  "tree": {
+   "ru": "дерево",
+   "e": "🌳"
+  },
+  "swim": {
+   "ru": "плавать",
+   "e": "🏊"
+  },
+  "jump": {
+   "ru": "прыгать",
+   "e": "🐸"
+  },
+  "run": {
+   "ru": "бегать",
+   "e": "🏃"
+  },
+  "sleep": {
+   "ru": "спать",
+   "e": "😴"
+  },
+  "eat": {
+   "ru": "есть, кушать",
+   "e": "🍽️"
+  },
+  "mother": {
+   "ru": "мама",
+   "e": "👩"
+  },
+  "father": {
+   "ru": "папа",
+   "e": "👨"
+  },
+  "sister": {
+   "ru": "сестра",
+   "e": "👧"
+  },
+  "brother": {
+   "ru": "брат",
+   "e": "👦"
+  },
+  "grandma": {
+   "ru": "бабушка",
+   "e": "👵"
+  },
+  "grandpa": {
+   "ru": "дедушка",
+   "e": "👴"
+  },
+  "baby": {
+   "ru": "малыш",
+   "e": "👶"
+  },
+  "friend": {
+   "ru": "друг",
+   "e": "🤝"
+  },
+  "cat": {
+   "ru": "кошка",
+   "e": "🐱"
+  },
+  "dog": {
+   "ru": "собака",
+   "e": "🐶"
+  },
+  "bike": {
+   "ru": "велосипед",
+   "e": "🚲"
+  },
+  "ball": {
+   "ru": "мяч",
+   "e": "⚽"
+  },
+  "house": {
+   "ru": "дом",
+   "e": "🏠"
+  },
+  "eyes": {
+   "ru": "глаза",
+   "e": "👀"
+  },
+  "hair": {
+   "ru": "волосы",
+   "e": "💇"
+  },
+  "key": {
+   "ru": "ключ",
+   "e": "🔑"
+  },
+  "happy": {
+   "ru": "счастливый",
+   "e": "😀"
+  },
+  "sad": {
+   "ru": "грустный",
+   "e": "😢"
+  },
+  "tired": {
+   "ru": "уставший",
+   "e": "🥱"
+  },
+  "hungry": {
+   "ru": "голодный",
+   "e": "🤤"
+  },
+  "thirsty": {
+   "ru": "хочет пить",
+   "e": "🥤"
+  },
+  "scared": {
+   "ru": "испуганный",
+   "e": "😱"
+  },
+  "party": {
+   "ru": "праздник",
+   "e": "🎉"
+  },
+  "birthday": {
+   "ru": "день рождения",
+   "e": "🎈"
+  },
+  "present": {
+   "ru": "подарок",
+   "e": "🎁"
+  },
+  "park": {
+   "ru": "парк",
+   "e": "🎠"
+  },
+  "school": {
+   "ru": "школа",
+   "e": "🏫"
+  },
+  "library": {
+   "ru": "библиотека",
+   "e": "📚"
+  },
+  "museum": {
+   "ru": "музей",
+   "e": "🏛️"
+  },
+  "zoo": {
+   "ru": "зоопарк",
+   "e": "🦓"
+  },
+  "money": {
+   "ru": "деньги",
+   "e": "💰"
+  },
+  "map": {
+   "ru": "карта",
+   "e": "🗺️"
+  }
+ },
+ "rules": {
+  "ps3": {
+   "name": "-s после he, she, it",
+   "villain": "Доктор Даз (Doctor Does)",
+   "rule": "Когда говорим про одного человека или предмет (he, she, it, the baker), к глаголу добавляем -s. После o, sh, ch — -es: goes, watches.",
+   "ex": "I work → he works · we go → she goes",
+   "quiz": {
+    "q": "She ___ milk.",
+    "opts": [
+     "drink",
+     "drinks"
+    ],
+    "a": 1,
+    "why": "She — одна, значит drinks."
+   }
+  },
+  "plural": {
+   "name": "Множественное число",
+   "villain": "Мисс Плюрал (Miss Plural)",
+   "rule": "Если предметов больше одного, добавляем -s: one apple — two apples. Особые слова: tomato → tomatoes, child → children.",
+   "ex": "one cake → three cakes · one tomato → two tomatoes",
+   "quiz": {
+    "q": "three ___",
+    "opts": [
+     "egg",
+     "eggs"
+    ],
+    "a": 1,
+    "why": "Яиц три, значит eggs."
+   }
+  },
+  "ing": {
+   "name": "Действие сейчас (am / is / are + -ing)",
+   "villain": "Леди Инг (Lady Ing)",
+   "rule": "Если действие идёт прямо сейчас, говорим am, is или are и глагол с -ing. Иногда согласная удваивается: run → running, swim → swimming.",
+   "ex": "The lion is sleeping. They are swimming.",
+   "quiz": {
+    "q": "Look! The monkey is ___.",
+    "opts": [
+     "jump",
+     "jumping"
+    ],
+    "a": 1,
+    "why": "Прямо сейчас: is jumping."
+   }
+  },
+  "have": {
+   "name": "have got / has got",
+   "villain": "Герцог Хэв (Duke Have)",
+   "rule": "I, you, we, they — have got. He, she, it (один человек или предмет) — has got.",
+   "ex": "I have got a cat. My sister has got a dog.",
+   "quiz": {
+    "q": "My brother ___ got a bike.",
+    "opts": [
+     "have",
+     "has"
+    ],
+    "a": 1,
+    "why": "Brother — он, значит has got."
+   }
+  },
+  "be": {
+   "name": "am / is / are, was / were",
+   "villain": "Барон Би (Baron Be)",
+   "rule": "Сейчас: I am, he/she/it is, we/you/they are. Вчера: I/he/she/it was, we/you/they were.",
+   "ex": "I am happy. We were at the zoo.",
+   "quiz": {
+    "q": "We ___ at the park yesterday.",
+    "opts": [
+     "was",
+     "were"
+    ],
+    "a": 1,
+    "why": "We — несколько, и это вчера: were."
+   }
+  }
+ },
+ "intercepts": [
+  {
+   "id": "L1",
+   "ch": "london",
+   "text": "Meet me at the bakery at five. Bring the cake!",
+   "qs": [
+    {
+     "q": "Где встреча?",
+     "opts": [
+      "в пекарне",
+      "в банке",
+      "у автобуса"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Во сколько?",
+     "opts": [
+      "в 9 часов",
+      "в 5 часов",
+      "в 2 часа"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Что принести?",
+     "opts": [
+      "сыр",
+      "молоко",
+      "торт"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "L2",
+   "ch": "london",
+   "text": "The boss is at the hospital. He is a doctor now!",
+   "qs": [
+    {
+     "q": "Где главарь?",
+     "opts": [
+      "в больнице",
+      "на ферме",
+      "в кафе"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Кем он притворяется?",
+     "opts": [
+      "пилотом",
+      "врачом",
+      "пекарем"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "L3",
+   "ch": "london",
+   "text": "Take the red bus to the farm. Go at night.",
+   "qs": [
+    {
+     "q": "На чём ехать?",
+     "opts": [
+      "на велосипеде",
+      "на красном автобусе",
+      "на самолёте"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Куда?",
+     "opts": [
+      "на ферму",
+      "в больницу",
+      "в школу"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Когда?",
+     "opts": [
+      "утром",
+      "днём",
+      "ночью"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "L4",
+   "ch": "london",
+   "text": "The postman has got the letter. Find him at the cafe.",
+   "qs": [
+    {
+     "q": "У кого письмо?",
+     "opts": [
+      "у пожарного",
+      "у почтальона",
+      "у пилота"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Где его искать?",
+     "opts": [
+      "в кафе",
+      "в пекарне",
+      "на ферме"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "L5",
+   "ch": "london",
+   "text": "The pilot works for us. He flies at six.",
+   "qs": [
+    {
+     "q": "Кто работает на банду?",
+     "opts": [
+      "медсестра",
+      "полицейский",
+      "пилот"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Во сколько он летит?",
+     "opts": [
+      "в 6",
+      "в 8",
+      "в 3"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "N1",
+   "ch": "newyork",
+   "text": "We have got the money. Hide it in the pizza box!",
+   "qs": [
+    {
+     "q": "Что у них есть?",
+     "opts": [
+      "деньги",
+      "торт",
+      "карта"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Где спрятать?",
+     "opts": [
+      "в холодильнике",
+      "в коробке из-под пиццы",
+      "в автобусе"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "N2",
+   "ch": "newyork",
+   "text": "Buy milk, eggs and bread. The boss is hungry.",
+   "qs": [
+    {
+     "q": "Что купить?",
+     "opts": [
+      "сыр и мясо",
+      "сок и шоколад",
+      "молоко, яйца и хлеб"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Почему?",
+     "opts": [
+      "главарь голодный",
+      "у главаря день рождения",
+      "главарь заболел"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "N3",
+   "ch": "newyork",
+   "text": "The diamond is in the chocolate cake. Do not eat it!",
+   "qs": [
+    {
+     "q": "Где бриллиант?",
+     "opts": [
+      "в банане",
+      "в шоколадном торте",
+      "в сыре"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Что нельзя делать?",
+     "opts": [
+      "есть торт",
+      "покупать торт",
+      "нести торт"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "N4",
+   "ch": "newyork",
+   "text": "Meet at the cafe. Order ice cream and lemon juice.",
+   "qs": [
+    {
+     "q": "Где встреча?",
+     "opts": [
+      "в парке",
+      "в пекарне",
+      "в кафе"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Что заказать?",
+     "opts": [
+      "мороженое и лимонный сок",
+      "пиццу и молоко",
+      "рыбу и хлеб"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "N5",
+   "ch": "newyork",
+   "text": "Miss Plural likes apples and bananas. She does not like fish.",
+   "qs": [
+    {
+     "q": "Что любит Мисс Плюрал?",
+     "opts": [
+      "рыбу",
+      "яблоки и бананы",
+      "помидоры"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Что она не любит?",
+     "opts": [
+      "рыбу",
+      "яблоки",
+      "торт"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "S1",
+   "ch": "sydney",
+   "text": "We are at the zoo. The kangaroo has got the key!",
+   "qs": [
+    {
+     "q": "Где банда?",
+     "opts": [
+      "в зоопарке",
+      "в школе",
+      "в музее"
+     ],
+     "a": 0
+    },
+    {
+     "q": "У кого ключ?",
+     "opts": [
+      "у льва",
+      "у кенгуру",
+      "у пингвина"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "S2",
+   "ch": "sydney",
+   "text": "Lady Ing is swimming with the dolphins.",
+   "qs": [
+    {
+     "q": "Что делает Леди Инг?",
+     "opts": [
+      "спит",
+      "бегает",
+      "плавает"
+     ],
+     "a": 2
+    },
+    {
+     "q": "С кем?",
+     "opts": [
+      "с дельфинами",
+      "с крокодилами",
+      "с обезьянами"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "S3",
+   "ch": "sydney",
+   "text": "Do not go near the crocodile. It is hungry!",
+   "qs": [
+    {
+     "q": "К кому нельзя подходить?",
+     "opts": [
+      "к жирафу",
+      "к крокодилу",
+      "к слону"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Почему?",
+     "opts": [
+      "он спит",
+      "он маленький",
+      "он голодный"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "S4",
+   "ch": "sydney",
+   "text": "The map is under the elephant. Look at night.",
+   "qs": [
+    {
+     "q": "Где карта?",
+     "opts": [
+      "под слоном",
+      "у тигра",
+      "у змеи"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Когда искать?",
+     "opts": [
+      "утром",
+      "ночью",
+      "днём"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "S5",
+   "ch": "sydney",
+   "text": "The monkey is climbing the tree. It has got the bag.",
+   "qs": [
+    {
+     "q": "Что делает обезьяна?",
+     "opts": [
+      "ест банан",
+      "спит",
+      "лезет на дерево"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Что у неё?",
+     "opts": [
+      "сумка",
+      "мяч",
+      "ключ"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "D1",
+   "ch": "dublin",
+   "text": "My brother is the boss. He has got a black cat.",
+   "qs": [
+    {
+     "q": "Кто главарь?",
+     "opts": [
+      "брат",
+      "сестра",
+      "дедушка"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Что у него есть?",
+     "opts": [
+      "белая собака",
+      "чёрная кошка",
+      "красный велосипед"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "D2",
+   "ch": "dublin",
+   "text": "Grandma has got the money. It is in her house.",
+   "qs": [
+    {
+     "q": "У кого деньги?",
+     "opts": [
+      "у мамы",
+      "у друга",
+      "у бабушки"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Где они?",
+     "opts": [
+      "в её доме",
+      "в парке",
+      "в школе"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "ch": "dublin",
+   "text": "Meet my friend in the park. He has got a ball.",
+   "qs": [
+    {
+     "q": "Где встреча?",
+     "opts": [
+      "в кафе",
+      "в парке",
+      "в зоопарке"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Как узнать друга?",
+     "opts": [
+      "у него мяч",
+      "у него кошка",
+      "у него велосипед"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "D4",
+   "ch": "dublin",
+   "text": "Duke Have has got green eyes and red hair.",
+   "qs": [
+    {
+     "q": "Какие у него глаза?",
+     "opts": [
+      "голубые",
+      "карие",
+      "зелёные"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Какие волосы?",
+     "opts": [
+      "рыжие",
+      "чёрные",
+      "светлые"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "D5",
+   "ch": "dublin",
+   "text": "The baby is sleeping. Do not ride the bike in the house!",
+   "qs": [
+    {
+     "q": "Кто спит?",
+     "opts": [
+      "папа",
+      "малыш",
+      "собака"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Что нельзя делать в доме?",
+     "opts": [
+      "кататься на велосипеде",
+      "играть в мяч",
+      "петь"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "T1",
+   "ch": "toronto",
+   "text": "We were at the museum yesterday. The guard was tired.",
+   "qs": [
+    {
+     "q": "Где банда была вчера?",
+     "opts": [
+      "в библиотеке",
+      "в школе",
+      "в музее"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Каким был охранник?",
+     "opts": [
+      "уставшим",
+      "весёлым",
+      "голодным"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "T2",
+   "ch": "toronto",
+   "text": "The party is at the school today. Bring a present.",
+   "qs": [
+    {
+     "q": "Где праздник?",
+     "opts": [
+      "в школе",
+      "в парке",
+      "в зоопарке"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Что принести?",
+     "opts": [
+      "торт",
+      "подарок",
+      "мяч"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Когда?",
+     "opts": [
+      "вчера",
+      "завтра",
+      "сегодня"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "T3",
+   "ch": "toronto",
+   "text": "Baron Be was at the library. He was hungry and sad.",
+   "qs": [
+    {
+     "q": "Где был Барон Би?",
+     "opts": [
+      "в музее",
+      "в библиотеке",
+      "в кафе"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Каким он был?",
+     "opts": [
+      "голодным и грустным",
+      "счастливым",
+      "испуганным"
+     ],
+     "a": 0
+    }
+   ]
+  },
+  {
+   "id": "T4",
+   "ch": "toronto",
+   "text": "I am scared! The police are in the park.",
+   "qs": [
+    {
+     "q": "Почему бандит испугался?",
+     "opts": [
+      "он голодный",
+      "в парке полиция",
+      "у него нет подарка"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Где полиция?",
+     "opts": [
+      "в школе",
+      "в зоопарке",
+      "в парке"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "T5",
+   "ch": "toronto",
+   "text": "Mister Mix is at the zoo. Today is his birthday!",
+   "qs": [
+    {
+     "q": "Где Мистер Микс?",
+     "opts": [
+      "в зоопарке",
+      "в музее",
+      "в библиотеке"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Какой сегодня день?",
+     "opts": [
+      "праздник в школе",
+      "его день рождения",
+      "выходной"
+     ],
+     "a": 1
+    }
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "id": "Lz1",
+   "ch": "london",
+   "text": "The baker {get|gets:ps3:getting} up at five. He {make|makes:ps3:maked} bread for the cafe."
+  },
+  {
+   "id": "Lz2",
+   "ch": "london",
+   "text": "My aunt is a nurse. She {work|works:ps3:worked} at the hospital. She {help|helps:ps3:helping} the doctor."
+  },
+  {
+   "id": "Lz3",
+   "ch": "london",
+   "text": "The postman {ride|rides:ps3:riding} a bike. He {bring|brings:ps3:bringed} letters every day."
+  },
+  {
+   "id": "Nz1",
+   "ch": "newyork",
+   "text": "I have got two {apple|apples:plural:appls} and three {banana|bananas:plural:bananaes}."
+  },
+  {
+   "id": "Nz2",
+   "ch": "newyork",
+   "text": "The cafe has got ten {pizza|pizzas:plural:pizzaes} and four {cake|cakes:plural:cakies}."
+  },
+  {
+   "id": "Nz3",
+   "ch": "newyork",
+   "text": "Buy six {tomato|tomatoes:plural:tomatos} and two {lemon|lemons:plural:lemones}, please."
+  },
+  {
+   "id": "Sz1",
+   "ch": "sydney",
+   "text": "Look! The kangaroo is {jump|jumping:ing:jumps}. The lions are {sleep|sleeping:ing:sleeps}."
+  },
+  {
+   "id": "Sz2",
+   "ch": "sydney",
+   "text": "The penguins are {swim|swimming:ing:swiming}. The monkey is {eat|eating:ing:eats} a banana."
+  },
+  {
+   "id": "Sz3",
+   "ch": "sydney",
+   "text": "Shh! The snake is {sleep|sleeping:ing:sleeps}. The tiger is {run|running:ing:runing}."
+  },
+  {
+   "id": "Dz1",
+   "ch": "dublin",
+   "text": "My sister {have|has:have:haves} got a cat. My grandpa {have|has:have:haves} got a big dog."
+  },
+  {
+   "id": "Dz2",
+   "ch": "dublin",
+   "text": "We {has|have:have:haves} got a new house. My brother {have|has:have:haves} got a red bike."
+  },
+  {
+   "id": "Dz3",
+   "ch": "dublin",
+   "text": "Grandma {have|has:have:haves} got blue eyes. I {has|have:have:haves} got brown hair."
+  },
+  {
+   "id": "Tz1",
+   "ch": "toronto",
+   "text": "I {is|am:be:are} happy today. It {are|is:be:am} my birthday!"
+  },
+  {
+   "id": "Tz2",
+   "ch": "toronto",
+   "text": "Yesterday we {was|were:be:are} at the museum. Tom {were|was:be:is} tired."
+  },
+  {
+   "id": "Tz3",
+   "ch": "toronto",
+   "text": "Where {was|were:be:is} you yesterday? I {were|was:be:am} at the library."
+  }
+ ],
+ "drills": {
+  "ps3": [
+   "My dad {drive|drives:ps3:driving} a bus.",
+   "The vet {help|helps:ps3:helped} animals.",
+   "Tom {go|goes:ps3:gos} to school.",
+   "The fireman {wear|wears:ps3:wearing} a big hat.",
+   "She {like|likes:ps3:liking} cats."
+  ],
+  "plural": [
+   "We need two {egg|eggs:plural:egges}.",
+   "I can see four {cat|cats:plural:cates}.",
+   "She has got five {sweet|sweets:plural:sweetes}.",
+   "Give me two {banana|bananas:plural:bananaes}, please.",
+   "Three {child|children:plural:childs} are in the cafe."
+  ],
+  "ing": [
+   "The giraffe is {eat|eating:ing:eats}.",
+   "We are {climb|climbing:ing:climbs} a tree.",
+   "The dolphins are {jump|jumping:ing:jumps}.",
+   "Look! The elephant is {run|running:ing:runing}.",
+   "I am {swim|swimming:ing:swiming} now."
+  ],
+  "have": [
+   "My friend {have|has:have:had} got a ball.",
+   "They {has|have:have:haves} got a baby.",
+   "Dad {have|has:have:haves} got short hair.",
+   "I {has|have:have:haves} got a sister.",
+   "The cat {have|has:have:haves} got green eyes."
+  ],
+  "be": [
+   "They {is|are:be:am} at the park.",
+   "She {were|was:be:are} sad yesterday.",
+   "We {is|are:be:am} hungry.",
+   "My friends {was|were:be:is} at the party.",
+   "I {are|am:be:is} thirsty."
+  ]
+ },
+ "phonics": [
+  {
+   "id": "a_e",
+   "mode": "hear",
+   "word": "cake",
+   "opts": [
+    "kek",
+    "cake",
+    "caik"
+   ],
+   "a": 1,
+   "rule": "a + согласная + немая e на конце: a читается [эй]. cake, name, make."
+  },
+  {
+   "id": "ch_ee",
+   "mode": "see",
+   "word": "cheese",
+   "opts": [
+    "[чиз]",
+    "[шиз]",
+    "[чезе]"
+   ],
+   "a": 0,
+   "rule": "ch читается [ч], ee — долгое [и:]. cheese, sheep, tree."
+  },
+  {
+   "id": "sh",
+   "mode": "hear",
+   "word": "ship",
+   "opts": [
+    "chip",
+    "sip",
+    "ship"
+   ],
+   "a": 2,
+   "rule": "sh читается [ш], ch — [ч]. ship — корабль, chip — чипс."
+  },
+  {
+   "id": "i_e",
+   "mode": "hear",
+   "word": "bike",
+   "opts": [
+    "bik",
+    "bike",
+    "baik"
+   ],
+   "a": 1,
+   "rule": "i + согласная + немая e: i читается [ай]. bike, five, time."
+  },
+  {
+   "id": "o_e",
+   "mode": "see",
+   "word": "home",
+   "opts": [
+    "[хоме]",
+    "[хоум]",
+    "[хом]"
+   ],
+   "a": 1,
+   "rule": "o + согласная + немая e: o читается [оу]. home, nose, rose."
+  },
+  {
+   "id": "sh2",
+   "mode": "hear",
+   "word": "fish",
+   "opts": [
+    "fich",
+    "fis",
+    "fish"
+   ],
+   "a": 2,
+   "rule": "Звук [ш] на конце пишется sh: fish, dish, wash."
+  },
+  {
+   "id": "oo",
+   "mode": "see",
+   "word": "moon",
+   "opts": [
+    "[мун]",
+    "[моон]",
+    "[мон]"
+   ],
+   "a": 0,
+   "rule": "oo чаще всего читается долгим [у:]: moon, food, zoo."
+  },
+  {
+   "id": "ck",
+   "mode": "hear",
+   "word": "duck",
+   "opts": [
+    "duk",
+    "dack",
+    "duck"
+   ],
+   "a": 2,
+   "rule": "После короткого гласного звук [к] пишется ck: duck, clock, black."
+  },
+  {
+   "id": "ea",
+   "mode": "see",
+   "word": "tea",
+   "opts": [
+    "[теа]",
+    "[ти]",
+    "[тэ]"
+   ],
+   "a": 1,
+   "rule": "ea обычно читается долгим [и:]: tea, eat, meat."
+  },
+  {
+   "id": "ar",
+   "mode": "hear",
+   "word": "car",
+   "opts": [
+    "kar",
+    "car",
+    "cah"
+   ],
+   "a": 1,
+   "rule": "ar читается долгим [а:]: car, park, farm."
+  },
+  {
+   "id": "or",
+   "mode": "see",
+   "word": "fork",
+   "opts": [
+    "[фо:к]",
+    "[фрок]",
+    "[фук]"
+   ],
+   "a": 0,
+   "rule": "or читается долгим [о:]: fork, horse, morning."
+  },
+  {
+   "id": "igh",
+   "mode": "see",
+   "word": "night",
+   "opts": [
+    "[нигхт]",
+    "[нит]",
+    "[найт]"
+   ],
+   "a": 2,
+   "rule": "igh читается [ай], а g и h молчат: night, light, high."
+  },
+  {
+   "id": "th",
+   "mode": "hear",
+   "word": "three",
+   "opts": [
+    "three",
+    "tree",
+    "free"
+   ],
+   "a": 0,
+   "rule": "th — особый звук: кончик языка между зубами. three — три, tree — дерево."
+  },
+  {
+   "id": "kn",
+   "mode": "see",
+   "word": "knife",
+   "opts": [
+    "[кнайф]",
+    "[найф]",
+    "[книф]"
+   ],
+   "a": 1,
+   "rule": "В начале kn буква k не читается: knife, know, knee. Это проделки Сайлент Сэма!"
+  },
+  {
+   "id": "ou",
+   "mode": "hear",
+   "word": "house",
+   "opts": [
+    "hous",
+    "house",
+    "haus"
+   ],
+   "a": 1,
+   "rule": "ou читается [ау]: house, mouse, out."
+  }
+ ],
+ "gloss": {
+  "meet": "встретить(ся)",
+  "me": "меня, мне",
+  "at": "в, у (место); в (время)",
+  "the": "(артикль, не переводится)",
+  "a": "(артикль, не переводится)",
+  "an": "(артикль)",
+  "five": "пять",
+  "six": "шесть",
+  "two": "два",
+  "three": "три",
+  "four": "четыре",
+  "ten": "десять",
+  "bring": "принеси, приносить",
+  "boss": "главарь, босс",
+  "is": "есть, находится (он, она)",
+  "he": "он",
+  "she": "она",
+  "it": "оно, это",
+  "now": "сейчас",
+  "take": "садись на, возьми",
+  "red": "красный, рыжий",
+  "to": "к, в (куда)",
+  "go": "иди, идти",
+  "has": "имеет (has got = у него есть)",
+  "got": "(have got / has got = есть, имеется)",
+  "find": "найди",
+  "him": "его, ему",
+  "works": "работает",
+  "work": "работать",
+  "for": "для, на",
+  "us": "нас, нам",
+  "flies": "летит",
+  "we": "мы",
+  "have": "имеем (have got = у нас есть)",
+  "hide": "спрячь",
+  "in": "в",
+  "box": "коробка",
+  "buy": "купи",
+  "and": "и",
+  "eggs": "яйца",
+  "hungry": "голодный",
+  "diamond": "бриллиант",
+  "do": "(вспомогательное слово)",
+  "not": "не",
+  "eat": "есть, кушать",
+  "order": "закажи",
+  "likes": "любит, нравится",
+  "apples": "яблоки",
+  "bananas": "бананы",
+  "does": "(вспомогательное слово для he, she)",
+  "like": "любить, нравиться",
+  "are": "есть, находятся (мы, они)",
+  "swimming": "плывёт, плавает (сейчас)",
+  "with": "с",
+  "dolphins": "дельфины",
+  "near": "рядом, близко",
+  "under": "под",
+  "look": "смотри, ищи",
+  "climbing": "лезет (сейчас)",
+  "bag": "сумка",
+  "my": "мой",
+  "black": "чёрный",
+  "her": "её",
+  "ball": "мяч",
+  "green": "зелёный",
+  "sleeping": "спит (сейчас)",
+  "ride": "ехать, кататься",
+  "rides": "катается",
+  "were": "были",
+  "yesterday": "вчера",
+  "guard": "охранник",
+  "was": "был, была",
+  "today": "сегодня",
+  "i": "я",
+  "am": "есть (я)",
+  "police": "полиция",
+  "his": "его",
+  "mister": "мистер",
+  "miss": "мисс",
+  "lady": "леди",
+  "duke": "герцог",
+  "baron": "барон",
+  "ing": "Инг",
+  "plural": "Плюрал",
+  "be": "Би",
+  "mix": "Микс",
+  "get": "вставать (get up)",
+  "gets": "встаёт (gets up)",
+  "getting": "встаёт (сейчас)",
+  "up": "вверх (get up = вставать)",
+  "make": "делать",
+  "makes": "делает, печёт",
+  "maked": "(неверная форма)",
+  "aunt": "тётя",
+  "worked": "работал",
+  "help": "помогать",
+  "helps": "помогает",
+  "helping": "помогает (сейчас)",
+  "riding": "едет (сейчас)",
+  "bringed": "(неверная форма)",
+  "brings": "приносит",
+  "letters": "письма",
+  "every": "каждый",
+  "day": "день",
+  "appls": "(неверная форма)",
+  "bananaes": "(неверная форма)",
+  "pizzas": "пиццы",
+  "pizzaes": "(неверная форма)",
+  "cakes": "торты",
+  "cakies": "(неверная форма)",
+  "tomatoes": "помидоры",
+  "tomatos": "(неверная форма)",
+  "lemons": "лимоны",
+  "lemones": "(неверная форма)",
+  "please": "пожалуйста",
+  "jumping": "прыгает (сейчас)",
+  "jumps": "прыгает",
+  "lions": "львы",
+  "sleeps": "спит",
+  "penguins": "пингвины",
+  "swiming": "(неверная форма)",
+  "eating": "ест (сейчас)",
+  "eats": "ест",
+  "shh": "тсс!",
+  "running": "бежит (сейчас)",
+  "runing": "(неверная форма)",
+  "haves": "(неверная форма)",
+  "big": "большой",
+  "new": "новый",
+  "blue": "голубой",
+  "brown": "карий, коричневый",
+  "tom": "Том",
+  "where": "где",
+  "you": "ты, вы",
+  "dad": "папа",
+  "drive": "водить",
+  "drives": "водит",
+  "driving": "ведёт (сейчас)",
+  "helped": "помогал",
+  "animals": "животные",
+  "goes": "идёт, ходит",
+  "gos": "(неверная форма)",
+  "wear": "носить",
+  "wears": "носит",
+  "wearing": "надет (сейчас)",
+  "hat": "шляпа, шапка",
+  "liking": "(неверная форма)",
+  "cats": "кошки",
+  "need": "нужно",
+  "egges": "(неверная форма)",
+  "can": "могу",
+  "see": "видеть",
+  "cates": "(неверная форма)",
+  "sweet": "конфета",
+  "sweetes": "(неверная форма)",
+  "give": "дай",
+  "child": "ребёнок",
+  "children": "дети",
+  "childs": "(неверная форма)",
+  "climb": "лазать",
+  "climbs": "лазает",
+  "jump": "прыгать",
+  "run": "бегать",
+  "swim": "плавать",
+  "had": "имел (прошлое)",
+  "they": "они",
+  "ice": "лёд (ice cream — мороженое)",
+  "cream": "сливки (ice cream — мороженое)",
+  "short": "короткий",
+  "friends": "друзья",
+  "lion": "лев",
+  "sleep": "спать",
+  "doctor": "врач",
+  "nurse": "медсестра",
+  "vet": "ветеринар",
+  "pilot": "пилот",
+  "policeman": "полицейский",
+  "fireman": "пожарный",
+  "postman": "почтальон",
+  "baker": "пекарь",
+  "bakery": "пекарня",
+  "hospital": "больница",
+  "farm": "ферма",
+  "cafe": "кафе",
+  "bus": "автобус",
+  "clock": "часы",
+  "letter": "письмо",
+  "night": "ночь",
+  "cake": "торт",
+  "milk": "молоко",
+  "cheese": "сыр",
+  "bread": "хлеб",
+  "fish": "рыба",
+  "apple": "яблоко",
+  "banana": "банан",
+  "egg": "яйцо",
+  "tomato": "помидор",
+  "meat": "мясо",
+  "juice": "сок",
+  "pizza": "пицца",
+  "chocolate": "шоколад",
+  "lemon": "лимон",
+  "ice cream": "мороженое",
+  "sweets": "конфеты",
+  "elephant": "слон",
+  "giraffe": "жираф",
+  "monkey": "обезьяна",
+  "crocodile": "крокодил",
+  "kangaroo": "кенгуру",
+  "penguin": "пингвин",
+  "dolphin": "дельфин",
+  "tiger": "тигр",
+  "snake": "змея",
+  "tree": "дерево",
+  "mother": "мама",
+  "father": "папа",
+  "sister": "сестра",
+  "brother": "брат",
+  "grandma": "бабушка",
+  "grandpa": "дедушка",
+  "baby": "малыш",
+  "friend": "друг",
+  "cat": "кошка",
+  "dog": "собака",
+  "bike": "велосипед",
+  "house": "дом",
+  "eyes": "глаза",
+  "hair": "волосы",
+  "key": "ключ",
+  "happy": "счастливый",
+  "sad": "грустный",
+  "tired": "уставший",
+  "thirsty": "хочет пить",
+  "scared": "испуганный",
+  "party": "праздник",
+  "birthday": "день рождения",
+  "present": "подарок",
+  "park": "парк",
+  "school": "школа",
+  "library": "библиотека",
+  "museum": "музей",
+  "zoo": "зоопарк",
+  "money": "деньги",
+  "map": "карта"
+ }
+}

@@ -6,6 +6,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, powerMonitor, s
 const { Store, dayKey, PROFILE_DEFAULTS } = require('./store');
 const { Scheduler } = require('../core/scheduler');
 const core = require('../core/content');
+const english = require('../core/english');
 const { VeloLink } = require('./velo');
 const telegram = require('./telegram');
 const updater = require('./updater');
@@ -21,6 +22,8 @@ if (!app.requestSingleInstanceLock()) {
 
 let store;
 let content;
+let enBank = null; // английский банк заданий (content/english.json)
+let nextSubj = null; // предмет ближайшего занятия: 'ru' | 'en'
 let scheduler;
 let velo;
 let appUpdates;
@@ -82,9 +85,16 @@ function showPhone(mode) {
   registerHotkeys();
 }
 
+// Какой предмет следующим: по настройкам чередования. Без английского банка — всегда русский.
+function chooseSubject() {
+  if (!enBank) return 'ru';
+  return english.nextSubject(store.settings, store.profile.queue, new Date());
+}
+
 function pushPhone(mode, buzz) {
   if (!phoneWin) return;
   phoneWin.webContents.send('phone:update', {
+    subject: nextSubj || 'ru',
     mode: mode || scheduler.state,
     left: Math.max(0, Math.ceil(scheduler.left)),
     canPostpone: scheduler.canPostpone(),
@@ -111,11 +121,13 @@ function unregisterHotkeys() {
   hotkeys = false;
 }
 
-function openSessionWindow() {
+function openSessionWindow(subject) {
   hidePhone();
+  const subj = subject || nextSubj || chooseSubject();
+  nextSubj = subj;
   velo.set('session', 'task');
-  log('Занятие началось');
-  session = { started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false };
+  log(`Занятие началось (${subj === 'en' ? 'английский' : 'русский'})`);
+  session = { subject: subj, started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false, words: 0, wordsOk: 0, intercept: false, arrest: null };
   allowSessionClose = false;
   sessionWin = new BrowserWindow({
     fullscreen: true, frame: false, alwaysOnTop: true, skipTaskbar: false, closable: true, minimizable: false,
@@ -123,7 +135,7 @@ function openSessionWindow() {
   });
   sessionWin.setAlwaysOnTop(true, 'screen-saver');
   sessionWin.setMenuBarVisibility(false);
-  sessionWin.loadFile(path.join(RENDERER, 'session.html'));
+  sessionWin.loadFile(path.join(RENDERER, subj === 'en' ? 'session-en.html' : 'session.html'));
   sessionWin.once('ready-to-show', () => { sessionWin.show(); sessionWin.focus(); });
   // Закрыть окно занятия можно только кнопкой «Вернуться в игру» или из трея по PIN.
   sessionWin.on('close', (e) => { if (!allowSessionClose) e.preventDefault(); });
@@ -136,6 +148,7 @@ function openSessionWindow() {
 function closeSessionWindow() {
   allowSessionClose = true;
   if (sessionWin) sessionWin.close();
+  nextSubj = null;
   velo.set('idle');
   scheduler.finish();
   store.profile.activeSec = 0;
@@ -169,6 +182,7 @@ function buildTray() {
   }
   const items = [
     { label: 'Открыть дело сейчас', enabled: !sessionWin, click: () => startNow() },
+    { label: 'Дело Интерпола (английский) сейчас', enabled: !sessionWin && !!enBank, click: () => startNow('en') },
     { label: 'Настройки и отчёт…', click: openSettings },
     { type: 'separator' },
   ];
@@ -190,10 +204,10 @@ function postpone() {
   }
 }
 
-function startNow() {
+function startNow(subject) {
   if (sessionWin) return;
   scheduler.forceStart();
-  openSessionWindow();
+  openSessionWindow(subject === 'ru' || (subject === 'en' && enBank) ? subject : chooseSubject());
 }
 
 // ---------- главный цикл ----------
@@ -208,6 +222,7 @@ function onRing() {
     setTimeout(hidePhone, 8000);
     return;
   }
+  nextSubj = chooseSubject();
   velo.set('warning');
   showPhone('warning');
 }
@@ -252,7 +267,7 @@ function dailyReport(date) {
   if (date.getHours() * 60 + date.getMinutes() < h * 60 + (m || 0)) return;
   store.profile.lastDailyReport = day;
   store.saveProfile();
-  report('итог дня', telegram.dailyText(s.childName, store.profile.log, store.profile, content.rules, day));
+  report('итог дня', telegram.dailyText(s.childName, store.profile.log, store.profile, content.rules, day, enBank));
 }
 
 async function checkUpdates() {
@@ -263,10 +278,36 @@ async function checkUpdates() {
   } else if (r.why !== 'уже последняя версия') {
     log(`Банк заданий не обновлён: ${r.why}`);
   }
+  if (enBank) {
+    const e = await updater.updateEnglish(app.getPath('userData'), enBank);
+    if (e.updated) {
+      enBank = e.content;
+      log(`Английский банк обновлён до версии ${enBank.version}`);
+    } else if (e.why !== 'уже последняя версия') {
+      log(`Английский банк не обновлён: ${e.why}`);
+    }
+  }
   appUpdates.check();
 }
 
 // ---------- связь с окнами ----------
+
+// Английский прогресс для окна родителя.
+function englishSummary() {
+  if (!enBank) return null;
+  const pen = english.ensure(store.profile.en);
+  const { chapter, patrol } = english.chapterOf(enBank, pen);
+  const learned = english.learnedCount(pen);
+  return {
+    version: enBank.version,
+    chapter: chapter.city, topic: chapter.topic, patrol, clues: pen.clues[chapter.id] || 0, need: chapter.clues,
+    villain: (enBank.rules[chapter.rule] || {}).villain || chapter.rule,
+    learned, introduced: Object.keys(pen.words).length, wordsTotal: Object.keys(enBank.words).length,
+    rank: english.rankOf(learned).rank.n, arrested: pen.arrested.map((r) => (enBank.rules[r] || {}).villain || r),
+    sessions: pen.sessions,
+    rules: Object.keys(enBank.rules).map((r) => ({ name: enBank.rules[r].name, villain: enBank.rules[r].villain, st: pen.stats[r] || null })),
+  };
+}
 
 function publicProfile() {
   const p = store.profile;
@@ -310,6 +351,43 @@ function registerIpc() {
     if (ok) { store.profile.coins += 5; store.profile.total += 5; session.coins += 5; store.saveProfile(); }
     return publicProfile();
   });
+  // ---------- английское занятие ----------
+  ipcMain.handle('en:data', () => ({
+    bank: enBank,
+    pen: english.ensure(store.profile.en),
+    profile: publicProfile(),
+    now: Date.now(),
+    settings: {
+      maxTasks: store.settings.enMaxTasks, newWords: store.settings.enNewWords, speechRate: store.settings.speechRate, voiceOn: store.settings.voiceOn,
+      vacationPrice: store.settings.vacationPrice, childName: store.settings.childName,
+      vacationsLeftToday: Math.max(0, store.settings.vacationsPerDay - store.vacationsToday()),
+    },
+  }));
+  ipcMain.handle('en:save', (_e, patch) => {
+    // Шаг английского занятия: { coins, words: [{ w, ok }], phonics, intercept, note: { id, tokens, found, total, falseHits, clean }, drillRule }
+    const p = store.profile;
+    const coins = Math.max(0, Math.round(Number(patch.coins) || 0));
+    p.coins += coins; p.total += coins;
+    const r = english.applyResult(enBank, p.en, patch, Date.now());
+    p.en = r.pen;
+    session.coins += coins;
+    (patch.words || []).forEach((x) => { session.words++; if (x.ok) session.wordsOk++; });
+    if (patch.intercept) session.intercept = true;
+    if (r.arrest) {
+      session.arrest = r.arrest;
+      log(`Глава закрыта, пойман бандит «${r.arrest}»`);
+    }
+    if (patch.note) {
+      const n = patch.note;
+      session.tasks++;
+      session.found += n.found || 0; session.total += n.total || 0; session.falseHits += n.falseHits || 0;
+      if (n.clean) p.cleanCases++;
+      (n.tokens || []).filter((t) => t.t === 'e' && t.state !== 'ok').forEach((t) => { if (!session.missedRules.includes(t.rule)) session.missedRules.push(t.rule); });
+      velo.set('session', session.missedRules.length ? 'rule' : 'result');
+    }
+    store.saveProfile();
+    return { pen: p.en, profile: publicProfile(), arrest: r.arrest };
+  });
   ipcMain.handle('session:vacation', () => {
     const r = store.buyVacation();
     if (r.ok) session.vacation = true;
@@ -320,11 +398,21 @@ function registerIpc() {
     session.solved = !!solved;
     session.minutes = Math.max(1, Math.round((Date.now() - session.started) / 60000));
     p.sessions++;
-    p.log = (p.log || []).concat([{ day: dayKey(new Date()), minutes: session.minutes, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks }]).slice(-200);
+    p.queue = english.advanceQueue(p.queue, new Date());
+    const entry = { day: dayKey(new Date()), subject: session.subject, minutes: session.minutes, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks };
+    if (session.subject === 'en') {
+      Object.assign(entry, { words: session.words, wordsOk: session.wordsOk });
+      p.en = english.applyResult(enBank, p.en, { sessionEnd: true }, Date.now()).pen;
+    }
+    p.log = (p.log || []).concat([entry]).slice(-200);
     store.saveProfile();
-    log(`Занятие окончено: дел ${session.tasks}, улик ${session.found} из ${session.total}`);
+    log(`Занятие окончено (${session.subject}): дел ${session.tasks}, улик ${session.found} из ${session.total}${session.subject === 'en' ? `, слов ${session.wordsOk} из ${session.words}` : ''}`);
     const s = store.settings;
-    if (s.reportEachSession) report('занятие', telegram.sessionText(s.childName, session, p, content.rules));
+    if (s.reportEachSession) {
+      report('занятие', session.subject === 'en'
+        ? telegram.enSessionText(s.childName, session, p, enBank)
+        : telegram.sessionText(s.childName, session, p, content.rules));
+    }
     else log('Отчёт после занятия выключен в настройках');
     closeSessionWindow();
     return true;
@@ -332,7 +420,11 @@ function registerIpc() {
 
   // Окно настроек. Всё, что меняет настройки, требует PIN.
   let unlocked = false;
-  ipcMain.handle('settings:state', () => ({ unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin, contentVersion: content.version, casesTotal: content.cases.length, logFile: path.join(app.getPath('userData'), 'oshibkin.log'), appVersion: app.getVersion(), rules: content.rules }));
+  ipcMain.handle('settings:state', () => ({
+    unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin,
+    contentVersion: content.version, casesTotal: content.cases.length, logFile: path.join(app.getPath('userData'), 'oshibkin.log'),
+    appVersion: app.getVersion(), rules: content.rules, english: englishSummary(), nextSubject: nextSubj || chooseSubject(),
+  }));
   ipcMain.handle('settings:unlock', (_e, pin) => (unlocked = store.checkPin(pin)));
   const guard = (fn) => (...a) => { if (!(unlocked || !store.hasPin())) throw new Error('Нужен PIN'); return fn(...a); };
   ipcMain.handle('settings:save', guard((_e, patch) => {
@@ -344,7 +436,7 @@ function registerIpc() {
   ipcMain.handle('settings:pin', guard((_e, pin) => { store.setPin(pin); unlocked = true; return true; }));
   ipcMain.handle('settings:telegramTest', guard(() => report('проверка', `Детектив Ошибкин на связи. Отчёты о занятиях (${store.settings.childName}) будут приходить сюда.`)));
   ipcMain.handle('settings:stopSession', guard(() => { if (sessionWin) { session.minutes = 0; closeSessionWindow(); } return true; }));
-  ipcMain.handle('settings:startNow', guard(() => { startNow(); return true; }));
+  ipcMain.handle('settings:startNow', guard((_e, subject) => { startNow(subject); return true; }));
   ipcMain.handle('settings:checkUpdates', guard(async () => { await checkUpdates(); return content.version; }));
   ipcMain.handle('settings:resetProgress', guard(() => {
     store.profile = JSON.parse(JSON.stringify(PROFILE_DEFAULTS));
@@ -364,6 +456,12 @@ app.whenReady().then(() => {
   if (process.platform === 'win32') app.setAppUserModelId('ru.gramma.oshibkin');
   store = new Store(app.getPath('userData'));
   content = updater.loadContent(app.getPath('userData'), path.join(ROOT, 'content', 'content.json'));
+  try {
+    enBank = updater.loadEnglish(app.getPath('userData'), path.join(ROOT, 'content', 'english.json'));
+  } catch (e) {
+    enBank = null;
+    log('Английский банк не загрузился: ' + e.message);
+  }
   scheduler = new Scheduler(schedulerSettings(), { activeSec: store.profile.activeSec });
   velo = new VeloLink();
   velo.set('idle');
@@ -375,7 +473,7 @@ app.whenReady().then(() => {
   setInterval(loop, 1000);
   setTimeout(checkUpdates, 30 * 1000);
   setInterval(checkUpdates, 6 * 3600 * 1000);
-  log(`Запущено. Банк заданий v${content.version}${DEMO ? ', демо-режим' : ''}`);
+  log(`Запущено. Банк заданий v${content.version}${enBank ? `, английский v${enBank.version}` : ''}${DEMO ? ', демо-режим' : ''}`);
 });
 
 app.on('will-quit', () => {

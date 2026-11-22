@@ -1,8 +1,8 @@
 {
   "name": "detective-oshibkin",
   "productName": "Детектив Ошибкин",
-  "version": "0.1.1",
-  "description": "Тренажёр русского языка для 4 класса: короткие занятия-перерывы во время игры",
+  "version": "0.2.0",
+  "description": "Тренажёр русского и английского для 4 класса: короткие занятия-перерывы во время игры",
   "main": "src/main/main.js",
   "author": "vital1972",
   "license": "MIT",

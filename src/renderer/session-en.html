@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Детектив Ошибкин — дело Интерпола</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  /* Окно английского занятия: тот же кабинет сыщика, синий акцент Интерпола. */
+  :root { --ip: #4f8ef0; --ip-ink: #06142b; --ip-soft: rgba(79,142,240,.16); --ip-line: #2c4f86; }
+  html, body { height: 100%; }
+  body { overflow: auto; padding: 32px 16px; background: radial-gradient(ellipse at 50% 0%, #1d2a45, var(--desk) 70%); }
+  .card { width: min(820px, 100%); margin: 0 auto; background: var(--desk-2); border: 1px solid var(--line); border-top: 4px solid var(--ip); border-radius: 16px; padding: 22px;
+    display: flex; flex-direction: column; gap: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .head .t { display: flex; flex-direction: column; }
+  .eyebrow { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ip); font-weight: 700; }
+  .head h2 { margin: 0; font-size: 20px; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill.ip { background: var(--ip-soft); color: #9cc0ff; }
+  .steps { display: flex; gap: 6px; }
+  .steps i { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+  .steps i.on { background: var(--ip); }
+  .steps i.done { background: #2f6b42; }
+  .det { display: flex; gap: 12px; align-items: flex-start; }
+  .ava { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; font-size: 26px; border: 3px solid #fff3; }
+  .ava.ip { background: var(--ip); color: var(--ip-ink); }
+  .say { background: var(--desk-3); border-radius: 12px; padding: 10px 14px; min-width: 0; font-size: 16px; }
+  .say b { color: var(--lamp); }
+  .btn-ip { background: var(--ip); color: var(--ip-ink); }
+  .big-play { align-self: center; font-size: 18px; padding: 14px 28px; border-radius: 99px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .pic { font-size: 52px; line-height: 1; padding: 18px 6px; border-radius: 14px; background: var(--desk-3); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--ink); }
+  .pic small { font-size: 14px; color: var(--ink-dim); min-height: 1.2em; }
+  .pic:hover:not(:disabled) { border-color: var(--ip); }
+  .pic.right { border-color: var(--good); background: rgba(63,155,92,.18); }
+  .pic.wrong { border-color: var(--bad); background: rgba(194,72,61,.15); }
+  .word-card { display: flex; gap: 18px; align-items: center; background: var(--ip-soft); border: 1px solid var(--ip-line); border-radius: 14px; padding: 16px; }
+  .word-card .e { font-size: 64px; line-height: 1; }
+  .word-card .w { font-size: 32px; font-weight: 700; }
+  .word-card .r { color: var(--ink-dim); font-size: 17px; }
+  .word-card button { margin-left: auto; }
+  .read-word { align-self: center; font-size: 38px; font-weight: 700; letter-spacing: .02em; display: flex; gap: 12px; align-items: center; }
+  .opts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .opt { background: var(--desk-3); border: 2px solid transparent; font-size: 19px; padding: 10px 18px; color: var(--ink); }
+  .opt:hover:not(:disabled) { border-color: var(--ip); }
+  .opt.right { border-color: var(--good); background: rgba(63,155,92,.18); }
+  .opt.wrong { border-color: var(--bad); background: rgba(194,72,61,.15); }
+  .opt.right:disabled, .pic.right:disabled { opacity: 1; }
+  .rule { background: var(--paper); color: var(--paper-ink); border-radius: 10px; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .rule .villain { font-size: 13px; font-weight: 700; color: #1f4f9e; text-transform: uppercase; letter-spacing: .06em; }
+  .rule h3 { margin: 0; font-size: 17px; }
+  .rule .ex { font-family: var(--hand); font-size: 23px; }
+  .tape { background: var(--paper); color: var(--paper-ink); border-radius: 6px; padding: 18px 22px; font-family: var(--hand); font-size: 28px; line-height: 1.8; position: relative;
+    background-image: repeating-linear-gradient(transparent 0 49px, var(--paper-line) 49px 50px); }
+  .tape.center { text-align: center; font-size: 40px; }
+  .stamp { position: absolute; top: 8px; right: 10px; font-family: var(--ui); font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #b33a2f; border: 2px solid #b33a2f; border-radius: 4px; padding: 0 6px; transform: rotate(4deg); line-height: 1.6; }
+  .wd { font: inherit; color: inherit; padding: 0 3px; border-radius: 5px; border: 0; background: none; cursor: pointer; }
+  .wd:hover { background: rgba(79,142,240,.2); }
+  .wd.fixed { background: rgba(63,155,92,.25); outline: 2px solid var(--good); }
+  .wd.half { background: rgba(217,130,43,.25); outline: 2px solid var(--warn); }
+  .wd.miss { background: rgba(194,72,61,.18); outline: 2px dashed var(--bad); }
+  .wd.sel { outline: 3px solid var(--ip); }
+  .wd.false { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-3px) } 75% { transform: translateX(3px) } }
+  .fixr { font-family: var(--ui); font-size: 14px; color: var(--good); vertical-align: super; font-weight: 700; margin-left: 2px; }
+  .gloss { min-height: 26px; font-size: 16px; color: var(--ink-dim); }
+  .gloss b { color: var(--ink); }
+  .q { display: flex; flex-direction: column; gap: 8px; }
+  .q .qt { font-weight: 500; font-size: 16px; }
+  .fixbox { background: var(--desk-3); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .stat { background: var(--desk-3); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .stat .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 13px; color: var(--ink-dim); }
+  .meter { height: 10px; border-radius: 99px; background: var(--desk); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--ip); }
+  .meter.lamp i { background: var(--lamp); }
+  .cities { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .city { border: 1px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; font-size: 13px; color: var(--ink-dim); }
+  .city .m { font-size: 24px; display: block; }
+  .city.on { border-color: var(--ip); color: var(--ink); background: var(--ip-soft); }
+  .city.done { border-color: #2f6b42; color: #8fd8a6; }
+  .arrest { background: rgba(63,155,92,.18); border: 1px solid #2f6b42; border-radius: 12px; padding: 12px 14px; font-size: 17px; }
+  .warnline { font-size: 13px; color: #f1b170; }
+</style>
+</head>
+<body>
+  <main class="card" id="card" aria-live="polite">
+    <div class="say">Интерпол выходит на связь…</div>
+  </main>
+<script src="../core/english.js"></script>
+<script src="session-en.js"></script>
+</body>
+</html>

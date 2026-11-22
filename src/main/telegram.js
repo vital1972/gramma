@@ -1,6 +1,7 @@
 // Отчёт родителю в Telegram. Нужен бот (токен от @BotFather) и номер чата родителя.
 'use strict';
 const core = require('../core/content');
+const english = require('../core/english');
 
 async function send(token, chatId, text, fetchImpl) {
   if (!token || !chatId) return { ok: false, why: 'Telegram не настроен' };
@@ -39,17 +40,42 @@ function sessionText(name, s, profile, rules) {
   return lines.join('\n');
 }
 
-function dailyText(name, log, profile, rules, day) {
-  const today = log.filter((x) => x.day === day);
-  if (!today.length) return `${name}: сегодня занятий не было.`;
-  const sum = (k) => today.reduce((s, x) => s + (x[k] || 0), 0);
-  const weak = weakRules(profile.stats, rules);
+function enSessionText(name, s, profile, bank) {
+  const pen = english.ensure(profile.en);
+  const learned = english.learnedCount(pen);
+  const { chapter, patrol } = bank ? english.chapterOf(bank, pen) : { chapter: null, patrol: false };
+  const ruleName = (r) => (bank && bank.rules[r] ? bank.rules[r].name : r);
   const lines = [
-    `Итог дня, ${name}: занятий ${today.length}, ${sum('minutes')} мин.`,
-    `Улик найдено ${sum('found')} из ${sum('total')}, коинов +${sum('coins')}.`,
+    `${name}: английский (дело Интерпола) за ${s.minutes} мин.`,
+    `Слова: верно с первого раза ${s.wordsOk} из ${s.words}. Перехват ${s.intercept ? 'расшифрован' : 'не расшифрован'}.`,
+    `Записки бандитов: ошибок найдено ${s.found} из ${s.total}.`,
+    `+${s.coins} коинов, в копилке ${profile.coins}. Выучено слов: ${learned}, звание: ${english.rankOf(learned).rank.n}.`,
   ];
-  if (weak.length) lines.push(`Слабые правила: ${weak.join('; ')}.`);
+  if (s.missedRules && s.missedRules.length) lines.push(`Разбирали: ${s.missedRules.map(ruleName).join('; ')}.`);
+  if (s.arrest && bank) lines.push(`Глава закрыта, пойман ${bank.rules[s.arrest] ? bank.rules[s.arrest].villain : s.arrest}.`);
+  else if (chapter && !patrol) lines.push(`Глава «${chapter.city}»: улик ${pen.clues[chapter.id] || 0} из ${chapter.clues}.`);
+  if (s.vacation) lines.push('Ребёнок взял «отпуск» на следующее занятие.');
   return lines.join('\n');
 }
 
-module.exports = { send, sessionText, dailyText, weakRules };
+function dailyText(name, log, profile, rules, day, bank) {
+  const today = log.filter((x) => x.day === day);
+  if (!today.length) return `${name}: сегодня занятий не было.`;
+  const sum = (arr, k) => arr.reduce((s, x) => s + (x[k] || 0), 0);
+  const ru = today.filter((x) => x.subject !== 'en');
+  const en = today.filter((x) => x.subject === 'en');
+  const lines = [`Итог дня, ${name}: занятий ${today.length}, ${sum(today, 'minutes')} мин, коинов +${sum(today, 'coins')}.`];
+  if (ru.length) lines.push(`Русский: занятий ${ru.length}, улик найдено ${sum(ru, 'found')} из ${sum(ru, 'total')}.`);
+  if (en.length) lines.push(`Английский: занятий ${en.length}, слова верно ${sum(en, 'wordsOk')} из ${sum(en, 'words')}, ошибок в записках найдено ${sum(en, 'found')} из ${sum(en, 'total')}.`);
+  const weak = weakRules(profile.stats, rules);
+  if (weak.length) lines.push(`Слабые правила русского: ${weak.join('; ')}.`);
+  if (bank && profile.en) {
+    const pen = english.ensure(profile.en);
+    const weakEn = weakRules(pen.stats, bank.rules);
+    if (weakEn.length) lines.push(`Слабые темы английского: ${weakEn.join('; ')}.`);
+    lines.push(`Выучено английских слов: ${english.learnedCount(pen)} из ${Object.keys(bank.words).length}.`);
+  }
+  return lines.join('\n');
+}
+
+module.exports = { send, sessionText, enSessionText, dailyText, weakRules };
