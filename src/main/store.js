@@ -15,6 +15,17 @@ const SETTINGS_DEFAULTS = {
   finalSec: 10,
   awaySec: 120,
   maxTasks: 3,
+  // Предметы: 'mix' — чередовать, 'ru' — только русский, 'en' — только английский.
+  subjectMode: 'mix',
+  ratioRu: 2,
+  ratioEn: 1,
+  weekendRatioRu: 0, // 0 — на выходных как в будни
+  weekendRatioEn: 0,
+  firstSubject: 'ru', // 'ru' | 'en' | 'alt' (по очереди через день)
+  enMaxTasks: 3,
+  enNewWords: 2,
+  speechRate: 0.85,
+  voiceOn: true,
   vacationPrice: 150,
   vacationsPerDay: 1,
   quietFrom: '',
@@ -43,6 +54,8 @@ const PROFILE_DEFAULTS = {
   activeSec: 0,
   log: [], // последние занятия для отчёта
   lastDailyReport: '',
+  en: null, // английский прогресс, см. src/core/english.js
+  queue: { day: '', pos: 0 }, // сколько занятий сегодня — для чередования предметов
 };
 
 function readJson(file, defaults) {
@@ -85,7 +98,25 @@ class Store {
       } else if (typeof def === 'boolean') clean[k] = !!patch[k];
       else clean[k] = String(patch[k]).trim();
     });
-    if (clean.maxTasks != null) clean.maxTasks = Math.min(5, Math.max(1, Math.round(clean.maxTasks)));
+    const clamp = (k, lo, hi, round) => {
+      if (clean[k] == null) return;
+      const v = Math.min(hi, Math.max(lo, clean[k]));
+      clean[k] = round === false ? v : Math.round(v);
+    };
+    clamp('maxTasks', 1, 5);
+    clamp('enMaxTasks', 1, 5);
+    clamp('enNewWords', 0, 4);
+    clamp('ratioRu', 0, 5);
+    clamp('ratioEn', 0, 5);
+    clamp('weekendRatioRu', 0, 5);
+    clamp('weekendRatioEn', 0, 5);
+    clamp('speechRate', 0.5, 1.2, false);
+    if (clean.subjectMode != null && !['mix', 'ru', 'en'].includes(clean.subjectMode)) delete clean.subjectMode;
+    if (clean.firstSubject != null && !['ru', 'en', 'alt'].includes(clean.firstSubject)) delete clean.firstSubject;
+    // Чередование 0 : 0 бессмысленно — оставляем русский.
+    const ru = clean.ratioRu != null ? clean.ratioRu : this.settings.ratioRu;
+    const en = clean.ratioEn != null ? clean.ratioEn : this.settings.ratioEn;
+    if (!ru && !en) clean.ratioRu = 1;
     Object.assign(this.settings, clean);
     writeJson(this.settingsFile, this.settings);
     return this.settings;

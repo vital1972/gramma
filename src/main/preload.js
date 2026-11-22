@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const SEND = ['phone:read', 'phone:later', 'phone:menu', 'settings:lock'];
 const INVOKE = [
-  'session:data', 'session:task', 'session:quiz', 'session:vacation', 'session:end',
+  'session:data', 'session:task', 'session:quiz', 'session:vacation', 'session:end', 'en:data', 'en:save',
   'settings:state', 'settings:unlock', 'settings:save', 'settings:pin', 'settings:telegramTest',
   'settings:stopSession', 'settings:startNow', 'settings:checkUpdates', 'settings:resetProgress', 'settings:quit',
 ];

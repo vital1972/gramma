@@ -21,9 +21,21 @@
     api.send('phone:menu', open);
   }
 
+  // Английское занятие: СМС приходит от Интерпола.
+  const IP = {
+    warning: { msg: 'Срочно: нужен переводчик', sub: 'Перехвачено сообщение банды' },
+    postponed: { msg: 'Срочно: нужен переводчик', sub: 'Отложено' },
+  };
+
   function render(d) {
     last = d;
-    const t = TEXT[d.mode] || TEXT.warning;
+    const ip = d.subject === 'en';
+    document.body.classList.toggle('ip', ip);
+    $('from').textContent = ip ? 'Интерпол → Ошибкину' : 'Детектив Ошибкин';
+    $('menuTitle').textContent = ip ? 'Срочное сообщение от Интерпола' : 'Новое сообщение от детектива Ошибкина';
+    if (ip && (d.mode === 'warning' || d.mode === 'postponed')) $('menuText').textContent = '«Банда Мистера Микса снова на связи. Доиграй битву, агент, и помоги перевести!»';
+    else if (d.mode === 'warning') $('menuText').textContent = '«Есть новое дело! Доиграй битву и приходи.»';
+    const t = Object.assign({}, TEXT[d.mode] || TEXT.warning, ip ? IP[d.mode] : null);
     $('msg').textContent = t.msg;
     $('sub').textContent = t.sub;
     $('cd').textContent = t.cd(d.left || 0);

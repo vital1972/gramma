@@ -4,9 +4,10 @@
   const api = window.oshibkin;
   const core = window.OshibkinCore;
   const $ = (id) => document.getElementById(id);
-  const NUM = ['intervalMin', 'maxTasks', 'warnSec', 'postponeSec', 'postponeLimit', 'idleStartSec', 'maxWaitPauseSec', 'vacationPrice', 'vacationsPerDay'];
-  const TEXT = ['childName', 'quietFrom', 'quietTo', 'telegramToken', 'telegramChatId', 'dailyReportAt'];
-  const BOOL = ['reportEachSession', 'autostart'];
+  const NUM = ['intervalMin', 'maxTasks', 'warnSec', 'postponeSec', 'postponeLimit', 'idleStartSec', 'maxWaitPauseSec', 'vacationPrice', 'vacationsPerDay',
+    'ratioRu', 'ratioEn', 'weekendRatioRu', 'weekendRatioEn', 'enMaxTasks', 'enNewWords', 'speechRate'];
+  const TEXT = ['childName', 'quietFrom', 'quietTo', 'telegramToken', 'telegramChatId', 'dailyReportAt', 'subjectMode', 'firstSubject'];
+  const BOOL = ['reportEachSession', 'autostart', 'voiceOn'];
   const TIME = ['quietFrom', 'quietTo', 'dailyReportAt'];
   let state = null;
 
@@ -48,6 +49,11 @@
     $('ver').textContent = `Программа ${state.appVersion} · задания v${state.contentVersion}${state.inSession ? ' · идёт занятие' : ''}`;
     $('stopSession').disabled = !state.inSession;
     $('startNow').disabled = state.inSession;
+    $('startRu').disabled = state.inSession;
+    $('startEn').disabled = state.inSession || !state.english;
+    $('nextSubj').textContent = state.english
+      ? `Следующее занятие: ${state.nextSubject === 'en' ? 'английский (дело Интерпола)' : 'русский'}.`
+      : 'Английский банк заданий не загрузился, все занятия по русскому.';
     const lr = state.profile.lastReport;
     $('tgLast').textContent = lr
       ? `Последняя отправка (${lr.kind}): ${new Date(lr.at).toLocaleString('ru-RU')} — ${lr.ok ? 'доставлено' : 'ошибка: ' + lr.why}`
@@ -88,28 +94,61 @@
       c.textContent = st ? `${state.rules[r].name}: верно ${st.ok}, ошибок ${st.miss}` : `${state.rules[r].name}: ещё не было`;
       $('chips').append(c);
     });
+    englishReport();
     // По дням, свежие сверху.
     const days = {};
     log.forEach((x) => {
-      const d = days[x.day] || (days[x.day] = { tasks: 0, found: 0, total: 0, coins: 0, minutes: 0 });
-      ['tasks', 'found', 'total', 'coins', 'minutes'].forEach((k) => { d[k] += x[k] || 0; });
+      const d = days[x.day] || (days[x.day] = { ru: 0, en: 0, found: 0, total: 0, words: 0, wordsOk: 0, coins: 0, minutes: 0 });
+      if (x.subject === 'en') d.en++; else d.ru++;
+      ['found', 'total', 'words', 'wordsOk', 'coins', 'minutes'].forEach((k) => { d[k] += x[k] || 0; });
     });
     $('log').innerHTML = '';
     const keys = Object.keys(days).sort().reverse().slice(0, 14);
     if (!keys.length) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="5">Занятий ещё не было</td>';
+      tr.innerHTML = '<td colspan="7">Занятий ещё не было</td>';
       $('log').append(tr);
     }
     keys.forEach((k) => {
       const d = days[k];
       const tr = document.createElement('tr');
-      [k.split('-').reverse().join('.'), d.tasks, `${d.found} из ${d.total}`, d.coins, d.minutes].forEach((v) => {
+      [k.split('-').reverse().join('.'), d.ru, d.en, `${d.found} из ${d.total}`, d.words ? `${d.wordsOk} из ${d.words}` : '—', d.coins, d.minutes].forEach((v) => {
         const td = document.createElement('td');
         td.textContent = v;
         tr.append(td);
       });
       $('log').append(tr);
+    });
+  }
+
+  function englishReport() {
+    const e = state.english;
+    $('enReport').hidden = !e;
+    if (!e) return;
+    $('enStats').innerHTML = '';
+    [
+      [e.rank, 'звание Интерпола'],
+      [`${e.learned} из ${e.wordsTotal}`, 'слов выучено (повторены 3 раза)'],
+      [e.introduced, 'слов показано'],
+      [e.patrol ? 'патруль' : e.chapter, e.patrol ? 'все главы пройдены' : `глава · ${e.topic}`],
+      [e.patrol ? '—' : `${Math.min(e.clues, e.need)} из ${e.need}`, e.patrol ? 'улики' : `улик против: ${e.villain}`],
+      [e.arrested.length, 'бандитов арестовано'],
+      [e.sessions, `английских занятий (банк v${e.version})`],
+    ].forEach(([v, k]) => {
+      const d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="v"></div><div class="k"></div>';
+      d.firstChild.textContent = v;
+      d.lastChild.textContent = k;
+      $('enStats').append(d);
+    });
+    $('enChips').innerHTML = '';
+    e.rules.forEach((r) => {
+      const c = document.createElement('span');
+      const st = r.st;
+      c.className = 'chip' + (st ? (st.miss > st.ok ? ' weak' : st.ok > 0 ? ' strong' : '') : '');
+      c.textContent = st ? `${r.name}: верно ${st.ok}, ошибок ${st.miss}` : `${r.name}: ещё не было`;
+      $('enChips').append(c);
     });
   }
 
@@ -188,6 +227,20 @@
     };
   };
   act('startNow', 'settings:startNow', 'Дело открыто');
+  const startSubj = (id, subj) => {
+    $(id).onclick = async () => {
+      try {
+        await api.invoke('settings:startNow', subj);
+        say('actToast', 'Дело открыто', 'good');
+        state = await api.invoke('settings:state');
+        header();
+      } catch (e) {
+        say('actToast', e.message, 'bad');
+      }
+    };
+  };
+  startSubj('startRu', 'ru');
+  startSubj('startEn', 'en');
   act('stopSession', 'settings:stopSession', 'Занятие прервано');
   act('checkUpdates', 'settings:checkUpdates', (v) => `Проверено. Задания v${v}`);
 
