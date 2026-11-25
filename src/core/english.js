@@ -255,11 +255,25 @@
   }
 
   // Варианты картинок для слова: само слово и три других с другой картинкой.
-  function wordOptions(bank, target, pen, rnd) {
+  // n — сколько всего картинок (по умолчанию 4).
+  function wordOptions(bank, target, pen, rnd, n) {
     const r = rnd || Math.random;
+    const k = Math.max(2, Math.min(8, n || 4)) - 1;
     const others = Object.keys(bank.words).filter((w) => w !== target && bank.words[w].e !== bank.words[target].e);
     const knownFirst = shuffle(others, r).sort((a, b) => (pen && pen.words[b] ? 1 : 0) - (pen && pen.words[a] ? 1 : 0));
-    return shuffle([target].concat(knownFirst.slice(0, 3)), r);
+    // Картинки не повторяются: у разных слов бывает одинаковый эмодзи.
+    const pics = new Set([bank.words[target].e]);
+    const picked = [];
+    knownFirst.forEach((w) => { if (picked.length < k && !pics.has(bank.words[w].e)) { pics.add(bank.words[w].e); picked.push(w); } });
+    return shuffle([target].concat(picked), r);
+  }
+
+  // Слова для дополнительного повторения: уже знакомые, не спрошенные в этом занятии, сначала из низких коробок.
+  function extraWords(bank, penIn, exclude, n, rnd) {
+    const pen = ensure(penIn);
+    const r = rnd || Math.random;
+    const pool = Object.keys(pen.words).filter((w) => bank.words[w] && !(exclude || []).includes(w));
+    return shuffle(pool, r).sort((a, b) => pen.words[a].box - pen.words[b].box).slice(0, Math.max(0, n));
   }
 
   function pickDrill(bank, pen, rule) {
@@ -360,7 +374,7 @@
 
   const api = {
     parse, errorsOf, wordsOf, glossOf, validate, ensure, learnedCount, answerWord, rankOf, chapterOf, chapterDone,
-    planSession, wordOptions, pickDrill, applyResult, scoreNote, nextSubject, advanceQueue, ruleWeight,
+    planSession, wordOptions, extraWords, pickDrill, applyResult, scoreNote, nextSubject, advanceQueue, ruleWeight,
     EN_RANKS, BOX_DAYS, LEARNED_BOX, EN_DEFAULTS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

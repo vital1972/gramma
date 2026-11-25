@@ -7,6 +7,7 @@ const { Store, dayKey, PROFILE_DEFAULTS } = require('./store');
 const { Scheduler } = require('../core/scheduler');
 const core = require('../core/content');
 const english = require('../core/english');
+const adaptive = require('../core/adaptive');
 const { VeloLink } = require('./velo');
 const telegram = require('./telegram');
 const notify = require('./notify');
@@ -128,7 +129,7 @@ function openSessionWindow(subject) {
   nextSubj = subj;
   velo.set('session', 'task');
   log(`Занятие началось (${subj === 'en' ? 'английский' : 'русский'})`);
-  session = { subject: subj, started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false, words: 0, wordsOk: 0, intercept: false, arrest: null };
+  session = { subject: subj, started: Date.now(), tasks: 0, found: 0, total: 0, coins: 0, falseHits: 0, missedRules: [], solved: false, vacation: false, words: 0, wordsOk: 0, intercept: false, arrest: null, items: [], levelFrom: adaptState(subj).level };
   allowSessionClose = false;
   sessionWin = new BrowserWindow({
     fullscreen: true, frame: false, alwaysOnTop: true, skipTaskbar: false, closable: true, minimizable: false,
@@ -314,6 +315,31 @@ function englishSummary() {
   };
 }
 
+// Уровень сложности и точность по предмету (сохраняются в progress.json между занятиями).
+function adaptState(subject) {
+  const p = store.profile;
+  p.adapt = p.adapt || {};
+  p.adapt[subject] = adaptive.ensure(p.adapt[subject], subject);
+  return p.adapt[subject];
+}
+
+function sessionWindow() {
+  const s = store.settings;
+  const min = Math.max(1, Number(s.sessionMinMin) || 2) * 60;
+  const max = Math.max(min / 60, Number(s.sessionMaxMin) || 3) * 60;
+  return { sessionMinSec: min, sessionMaxSec: max };
+}
+
+function adaptSummary() {
+  const out = {};
+  ['ru', 'en'].forEach((k) => {
+    const a = adaptState(k);
+    const acc = adaptive.accuracy(a);
+    out[k] = { level: a.level, max: adaptive.maxLevel(k), label: adaptive.levelOf(k, a.level).label, acc: acc == null ? null : Math.round(acc * 100), answers: Math.min(a.items.length, adaptive.WINDOW) };
+  });
+  return out;
+}
+
 function publicProfile() {
   const p = store.profile;
   return { coins: p.coins, total: p.total, stats: p.stats, drillIndex: p.drillIndex, lastCase: p.lastCase, seenCases: p.seenCases || [], lastReport: p.lastReport || null, vacationPending: p.vacationPending, cleanCases: p.cleanCases, sessions: p.sessions, log: (p.log || []).slice(-60) };
@@ -330,19 +356,38 @@ function registerIpc() {
   ipcMain.handle('session:data', () => ({
     content,
     profile: publicProfile(),
-    settings: { maxTasks: store.settings.maxTasks, vacationPrice: store.settings.vacationPrice, childName: store.settings.childName, vacationsLeftToday: Math.max(0, store.settings.vacationsPerDay - store.vacationsToday()) },
+    adapt: adaptState('ru'),
+    settings: Object.assign(sessionWindow(), { vacationPrice: store.settings.vacationPrice, childName: store.settings.childName, vacationsLeftToday: Math.max(0, store.settings.vacationsPerDay - store.vacationsToday()) }),
   }));
+  // Ответы и время шага: { subject, items: [0..1], key: 'ru:case', sec }. Возвращает { state, change }.
+  ipcMain.handle('adapt:report', (_e, r) => {
+    const subject = r && r.subject === 'en' ? 'en' : 'ru';
+    const p = store.profile;
+    let a = adaptState(subject);
+    const items = Array.isArray(r.items) ? r.items.slice(0, 50) : [];
+    const res = adaptive.record(a, subject, items, Date.now());
+    a = res.state;
+    if (r.key && /^(ru|en):[\w+]+$/.test(r.key) && Number(r.sec) > 0) a = adaptive.noteTime(a, r.key, r.sec);
+    p.adapt[subject] = a;
+    const n = Math.min(items.length, res.state.items.length);
+    if (session && n) session.items = session.items.concat(res.state.items.slice(-n));
+    if (res.change) log(`Уровень ${subject === 'en' ? 'английского' : 'русского'}: ${a.level} (${res.change > 0 ? 'выше' : 'ниже'}), точность ${a.changes[a.changes.length - 1].acc}%`);
+    store.saveProfile();
+    return { state: a, change: res.change };
+  });
   ipcMain.handle('session:task', (_e, r) => {
     // Итог одного дела: { caseTitle, drillRule, coins, found, total, falseHits, statsAfter, reviewRules, clean }
     const p = store.profile;
     p.coins += r.coins; p.total += r.coins;
     if (r.clean) p.cleanCases++;
     p.stats = r.statsAfter || p.stats;
-    if (r.caseTitle) {
-      p.lastCase = r.caseTitle;
-      p.seenCases = core.rememberCase(p.seenCases, r.caseTitle);
-    }
-    if (r.drillRule) p.drillIndex[r.drillRule] = (p.drillIndex[r.drillRule] || 0) + 1;
+    const caseTitles = (r.caseTitles || []).concat(r.caseTitle ? [r.caseTitle] : []);
+    const drillRules = (r.drillRules || []).concat(r.drillRule ? [r.drillRule] : []);
+    caseTitles.forEach((t) => {
+      p.lastCase = t;
+      p.seenCases = core.rememberCase(p.seenCases, t);
+    });
+    drillRules.forEach((d) => { p.drillIndex[d] = (p.drillIndex[d] || 0) + 1; });
     store.saveProfile();
     Object.assign(session, {
       tasks: session.tasks + 1, found: session.found + r.found, total: session.total + r.total,
@@ -361,9 +406,10 @@ function registerIpc() {
     bank: enBank,
     pen: english.ensure(store.profile.en),
     profile: publicProfile(),
+    adapt: adaptState('en'),
     now: Date.now(),
     settings: {
-      maxTasks: store.settings.enMaxTasks, newWords: store.settings.enNewWords, speechRate: store.settings.speechRate, voiceOn: store.settings.voiceOn,
+      ...sessionWindow(), newWords: store.settings.enNewWords, speechRate: store.settings.speechRate, voiceOn: store.settings.voiceOn,
       vacationPrice: store.settings.vacationPrice, childName: store.settings.childName,
       vacationsLeftToday: Math.max(0, store.settings.vacationsPerDay - store.vacationsToday()),
     },
@@ -404,7 +450,12 @@ function registerIpc() {
     session.minutes = Math.max(1, Math.round((Date.now() - session.started) / 60000));
     p.sessions++;
     p.queue = english.advanceQueue(p.queue, new Date());
-    const entry = { day: dayKey(new Date()), subject: session.subject, minutes: session.minutes, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks };
+    const acc = session.items.length ? Math.round((session.items.reduce((a, b) => a + b, 0) / session.items.length) * 100) : null;
+    session.acc = acc;
+    session.seconds = Math.round((Date.now() - session.started) / 1000);
+    session.level = adaptState(session.subject).level;
+    session.levelMax = adaptive.maxLevel(session.subject);
+    const entry = { day: dayKey(new Date()), subject: session.subject, minutes: session.minutes, seconds: session.seconds, found: session.found, total: session.total, coins: session.coins, tasks: session.tasks, acc, answers: session.items.length, level: session.level };
     if (session.subject === 'en') {
       Object.assign(entry, { words: session.words, wordsOk: session.wordsOk });
       p.en = english.applyResult(enBank, p.en, { sessionEnd: true }, Date.now()).pen;
@@ -428,7 +479,7 @@ function registerIpc() {
   ipcMain.handle('settings:state', () => ({
     unlocked: unlocked || !store.hasPin(), settings: store.publicSettings(), profile: publicProfile(), inSession: !!sessionWin,
     contentVersion: content.version, casesTotal: content.cases.length, logFile: path.join(app.getPath('userData'), 'oshibkin.log'),
-    appVersion: app.getVersion(), rules: content.rules, english: englishSummary(), nextSubject: nextSubj || chooseSubject(),
+    appVersion: app.getVersion(), rules: content.rules, english: englishSummary(), adapt: adaptSummary(), nextSubject: nextSubj || chooseSubject(),
   }));
   ipcMain.handle('settings:unlock', (_e, pin) => (unlocked = store.checkPin(pin)));
   const guard = (fn) => (...a) => { if (!(unlocked || !store.hasPin())) throw new Error('Нужен PIN'); return fn(...a); };

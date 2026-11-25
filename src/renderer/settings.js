@@ -4,8 +4,8 @@
   const api = window.oshibkin;
   const core = window.OshibkinCore;
   const $ = (id) => document.getElementById(id);
-  const NUM = ['intervalMin', 'maxTasks', 'warnSec', 'postponeSec', 'postponeLimit', 'idleStartSec', 'maxWaitPauseSec', 'vacationPrice', 'vacationsPerDay',
-    'ratioRu', 'ratioEn', 'weekendRatioRu', 'weekendRatioEn', 'enMaxTasks', 'enNewWords', 'speechRate'];
+  const NUM = ['intervalMin', 'sessionMinMin', 'sessionMaxMin', 'warnSec', 'postponeSec', 'postponeLimit', 'idleStartSec', 'maxWaitPauseSec', 'vacationPrice', 'vacationsPerDay',
+    'ratioRu', 'ratioEn', 'weekendRatioRu', 'weekendRatioEn', 'enNewWords', 'speechRate'];
   const TEXT = ['childName', 'quietFrom', 'quietTo', 'reportChannel', 'telegramToken', 'telegramChatId', 'vkToken', 'vkPeerId', 'maxToken', 'maxUserId', 'dailyReportAt', 'subjectMode', 'firstSubject'];
   const BOOL = ['reportEachSession', 'autostart', 'voiceOn'];
   const TIME = ['quietFrom', 'quietTo', 'dailyReportAt'];
@@ -97,29 +97,47 @@
       $('chips').append(c);
     });
     englishReport();
+    adaptReport();
     // По дням, свежие сверху.
     const days = {};
     log.forEach((x) => {
-      const d = days[x.day] || (days[x.day] = { ru: 0, en: 0, found: 0, total: 0, words: 0, wordsOk: 0, coins: 0, minutes: 0 });
+      const d = days[x.day] || (days[x.day] = { ru: 0, en: 0, found: 0, total: 0, words: 0, wordsOk: 0, coins: 0, minutes: 0, accSum: 0, answers: 0 });
       if (x.subject === 'en') d.en++; else d.ru++;
-      ['found', 'total', 'words', 'wordsOk', 'coins', 'minutes'].forEach((k) => { d[k] += x[k] || 0; });
+      ['found', 'total', 'words', 'wordsOk', 'coins'].forEach((k) => { d[k] += x[k] || 0; });
+      d.minutes += x.seconds ? x.seconds / 60 : (x.minutes || 0);
+      if (x.acc != null && x.answers) { d.accSum += x.acc * x.answers; d.answers += x.answers; }
     });
     $('log').innerHTML = '';
     const keys = Object.keys(days).sort().reverse().slice(0, 14);
     if (!keys.length) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="7">Занятий ещё не было</td>';
+      tr.innerHTML = '<td colspan="8">Занятий ещё не было</td>';
       $('log').append(tr);
     }
     keys.forEach((k) => {
       const d = days[k];
       const tr = document.createElement('tr');
-      [k.split('-').reverse().join('.'), d.ru, d.en, `${d.found} из ${d.total}`, d.words ? `${d.wordsOk} из ${d.words}` : '—', d.coins, d.minutes].forEach((v) => {
+      [k.split('-').reverse().join('.'), d.ru, d.en, `${d.found} из ${d.total}`, d.words ? `${d.wordsOk} из ${d.words}` : '—', d.answers ? `${Math.round(d.accSum / d.answers)} %` : '—', d.coins, Math.round(d.minutes * 10) / 10].forEach((v) => {
         const td = document.createElement('td');
         td.textContent = v;
         tr.append(td);
       });
       $('log').append(tr);
+    });
+  }
+
+  function adaptReport() {
+    const a = state.adapt || {};
+    $('adaptStats').innerHTML = '';
+    [['ru', 'Русский'], ['en', 'Английский']].forEach(([k, name]) => {
+      const x = a[k];
+      if (!x || (k === 'en' && !state.english)) return;
+      const d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="v"></div><div class="k"></div>';
+      d.firstChild.textContent = `${name}: ${x.level} из ${x.max}`;
+      d.lastChild.textContent = `${x.label} · ${x.acc == null ? 'ответов пока нет' : `верно ${x.acc} % из последних ${x.answers} ответов`}`;
+      $('adaptStats').append(d);
     });
   }
 

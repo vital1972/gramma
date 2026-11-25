@@ -28,13 +28,29 @@ function weakRules(stats, rules) {
     .map((r) => (rules[r] ? rules[r].name : r));
 }
 
+// Длительность занятия: «2 мин 30 с».
+function dur(s) {
+  if (!s.seconds) return `${s.minutes} мин`;
+  const m = Math.floor(s.seconds / 60);
+  const sec = s.seconds % 60;
+  return m ? `${m} мин${sec ? ` ${sec} с` : ''}` : `${sec} с`;
+}
+
+// Точность и уровень сложности за занятие.
+function adaptLine(s) {
+  if (s.acc == null || !s.level) return null;
+  const moved = s.levelFrom && s.levelFrom !== s.level ? ` (было ${s.levelFrom})` : '';
+  return `Верных ответов ${s.acc} % (цель 75–85 %), сложность ${s.level} из ${s.levelMax}${moved}.`;
+}
+
 function sessionText(name, s, profile, rules) {
   const rank = core.rankOf(profile.total, profile.stats).rank.n;
   const lines = [
-    `${name}: ${s.solved ? 'дело раскрыто' : 'занятие окончено'} за ${s.minutes} мин.`,
+    `${name}: ${s.solved ? 'дело раскрыто' : 'занятие окончено'} за ${dur(s)}.`,
     `Дел: ${s.tasks}, улик найдено ${s.found} из ${s.total}, ошибочных обвинений ${s.falseHits}.`,
     `+${s.coins} коинов, в копилке ${profile.coins}. Звание: ${rank}.`,
   ];
+  if (adaptLine(s)) lines.splice(2, 0, adaptLine(s));
   if (s.missedRules && s.missedRules.length) lines.push(`Разбирали: ${s.missedRules.map((r) => (rules[r] ? rules[r].name : r)).join('; ')}.`);
   if (s.vacation) lines.push('Ребёнок взял «отпуск» на следующее занятие.');
   return lines.join('\n');
@@ -46,16 +62,17 @@ function enSessionText(name, s, profile, bank) {
   const { chapter, patrol } = bank ? english.chapterOf(bank, pen) : { chapter: null, patrol: false };
   const ruleName = (r) => (bank && bank.rules[r] ? bank.rules[r].name : r);
   const lines = [
-    `${name}: английский (дело Интерпола) за ${s.minutes} мин.`,
+    `${name}: английский (дело Интерпола) за ${dur(s)}.`,
     `Слова: верно с первого раза ${s.wordsOk} из ${s.words}. Перехват ${s.intercept ? 'расшифрован' : 'не расшифрован'}.`,
     `Записки бандитов: ошибок найдено ${s.found} из ${s.total}.`,
+    adaptLine(s),
     `+${s.coins} коинов, в копилке ${profile.coins}. Выучено слов: ${learned}, звание: ${english.rankOf(learned).rank.n}.`,
   ];
   if (s.missedRules && s.missedRules.length) lines.push(`Разбирали: ${s.missedRules.map(ruleName).join('; ')}.`);
   if (s.arrest && bank) lines.push(`Глава закрыта, пойман ${bank.rules[s.arrest] ? bank.rules[s.arrest].villain : s.arrest}.`);
   else if (chapter && !patrol) lines.push(`Глава «${chapter.city}»: улик ${pen.clues[chapter.id] || 0} из ${chapter.clues}.`);
   if (s.vacation) lines.push('Ребёнок взял «отпуск» на следующее занятие.');
-  return lines.join('\n');
+  return lines.filter(Boolean).join('\n');
 }
 
 function dailyText(name, log, profile, rules, day, bank) {
@@ -65,8 +82,12 @@ function dailyText(name, log, profile, rules, day, bank) {
   const ru = today.filter((x) => x.subject !== 'en');
   const en = today.filter((x) => x.subject === 'en');
   const lines = [`Итог дня, ${name}: занятий ${today.length}, ${sum(today, 'minutes')} мин, коинов +${sum(today, 'coins')}.`];
-  if (ru.length) lines.push(`Русский: занятий ${ru.length}, улик найдено ${sum(ru, 'found')} из ${sum(ru, 'total')}.`);
-  if (en.length) lines.push(`Английский: занятий ${en.length}, слова верно ${sum(en, 'wordsOk')} из ${sum(en, 'words')}, ошибок в записках найдено ${sum(en, 'found')} из ${sum(en, 'total')}.`);
+  const acc = (arr) => {
+    const n = sum(arr.filter((x) => x.acc != null), 'answers');
+    return n ? `, верных ответов ${Math.round(arr.reduce((a, x) => a + (x.acc != null ? x.acc * (x.answers || 0) : 0), 0) / n)} %` : '';
+  };
+  if (ru.length) lines.push(`Русский: занятий ${ru.length}, улик найдено ${sum(ru, 'found')} из ${sum(ru, 'total')}${acc(ru)}.`);
+  if (en.length) lines.push(`Английский: занятий ${en.length}, слова верно ${sum(en, 'wordsOk')} из ${sum(en, 'words')}, ошибок в записках найдено ${sum(en, 'found')} из ${sum(en, 'total')}${acc(en)}.`);
   const weak = weakRules(profile.stats, rules);
   if (weak.length) lines.push(`Слабые правила русского: ${weak.join('; ')}.`);
   if (bank && profile.en) {
