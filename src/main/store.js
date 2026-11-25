@@ -14,7 +14,9 @@ const SETTINGS_DEFAULTS = {
   maxWaitPauseSec: 300,
   finalSec: 10,
   awaySec: 120,
-  maxTasks: 3,
+  maxTasks: 3, // устарело: объём занятия теперь подбирается по времени
+  sessionMinMin: 2, // занятие длится от … минут
+  sessionMaxMin: 3, // … до … минут
   // Предметы: 'mix' — чередовать, 'ru' — только русский, 'en' — только английский.
   subjectMode: 'mix',
   ratioRu: 2,
@@ -60,6 +62,7 @@ const PROFILE_DEFAULTS = {
   log: [], // последние занятия для отчёта
   lastDailyReport: '',
   en: null, // английский прогресс, см. src/core/english.js
+  adapt: {}, // { ru, en }: уровень сложности, последние ответы, среднее время шагов (src/core/adaptive.js)
   queue: { day: '', pos: 0 }, // сколько занятий сегодня — для чередования предметов
 };
 
@@ -109,6 +112,8 @@ class Store {
       clean[k] = round === false ? v : Math.round(v);
     };
     clamp('maxTasks', 1, 5);
+    clamp('sessionMinMin', 1, 10, false);
+    clamp('sessionMaxMin', 1, 15, false);
     clamp('enMaxTasks', 1, 5);
     clamp('enNewWords', 0, 4);
     clamp('ratioRu', 0, 5);
@@ -118,6 +123,10 @@ class Store {
     clamp('speechRate', 0.5, 1.2, false);
     if (clean.subjectMode != null && !['mix', 'ru', 'en'].includes(clean.subjectMode)) delete clean.subjectMode;
     if (clean.firstSubject != null && !['ru', 'en', 'alt'].includes(clean.firstSubject)) delete clean.firstSubject;
+    // Верхняя граница занятия не меньше нижней.
+    const lo = clean.sessionMinMin != null ? clean.sessionMinMin : this.settings.sessionMinMin;
+    const hi = clean.sessionMaxMin != null ? clean.sessionMaxMin : this.settings.sessionMaxMin;
+    if (hi < lo) clean.sessionMaxMin = lo;
     // Чередование 0 : 0 бессмысленно — оставляем русский.
     const ru = clean.ratioRu != null ? clean.ratioRu : this.settings.ratioRu;
     const en = clean.ratioEn != null ? clean.ratioEn : this.settings.ratioEn;

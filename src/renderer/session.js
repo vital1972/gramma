@@ -3,6 +3,7 @@
 (async () => {
   const api = window.oshibkin;
   const core = window.OshibkinCore;
+  const AD = window.OshibkinAdaptive;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -10,7 +11,18 @@
   const RULES = data.content.rules;
   const cfg = data.settings;
   let profile = data.profile;
-  const S = { n: 0, coins: 0, found: 0, total: 0, missedRules: [], started: Date.now(), rankAtStart: core.rankOf(data.profile.total, data.profile.stats).rank.n };
+  const S = { n: 0, coins: 0, found: 0, total: 0, missedRules: [], drilled: [], started: Date.now(), rankAtStart: core.rankOf(data.profile.total, data.profile.stats).rank.n, levelUp: false };
+  let adapt = AD.ensure(data.adapt, 'ru');
+  const minSec = cfg.sessionMinSec || 120;
+  const maxSec = cfg.sessionMaxSec || 180;
+  const elapsed = () => (Date.now() - S.started) / 1000;
+  // Ответы и время шага уходят в main-процесс: там уровень сохраняется между занятиями.
+  async function report(items, key, sec) {
+    const r = await api.invoke('adapt:report', { subject: 'ru', items, key, sec });
+    adapt = AD.ensure(r.state, 'ru');
+    if (r.change > 0) S.levelUp = true;
+    return r;
+  }
 
   const ruleOf = (r) => RULES[r] || { name: r, villain: 'Безграмотный', rule: '', ex: '', quiz: null };
 
@@ -26,24 +38,36 @@
   }
 
   // ---------- вступление ----------
-  function showIntro(title, intro, text, drillRule) {
+  // task: { title, intro, text, kind, caseTitles, drillRules, remedial }
+  function showIntro(task) {
     S.n++;
+    const L = AD.levelOf('ru', adapt.level);
+    const up = S.levelUp ? '<div class="det"><div class="ava">Д.О.</div><div class="say">Ты щёлкаешь улики как орешки. Начальство даёт дела посложнее!</div></div>' : '';
+    S.levelUp = false;
     card(`
-      <div class="case-head"><h2>Дело № ${S.n} · ${esc(title)}</h2><span class="pill">Дело ${S.n} из ${cfg.maxTasks} (не больше)</span></div>
-      <div class="det"><div class="ava">Д.О.</div><div class="say">${esc(intro)}</div></div>
+      <div class="case-head"><h2>Дело № ${S.n} · ${esc(task.title)}</h2><span class="pill">Дело ${S.n}</span></div>
+      ${up}
+      <div class="det"><div class="ava">Д.О.</div><div class="say">${esc(task.remedial ? task.intro : AD.stripCount(task.intro))}</div></div>
       <div class="actions"><span></span><button class="btn-main" id="go">Взяться за дело</button></div>`);
-    $('go').onclick = () => showTask(title, text, drillRule);
+    $('go').onclick = () => showTask(task, L);
     $('go').focus();
   }
 
   // ---------- записка ----------
-  function showTask(title, text, drillRule) {
-    const toks = core.parse(text).map((t) => (t.t === 'e' ? Object.assign(t, { state: 'none', tries: 0 }) : t));
+  function showTask(task, L) {
+    const title = task.title;
+    const toks = core.parse(task.text).map((t) => (t.t === 'e' ? Object.assign(t, { state: 'none', tries: 0 }) : t));
     const errs = toks.filter((t) => t.t === 'e');
-    const T = { toks, errs, falseHits: 0, hint: false, sel: null };
+    const T = { toks, errs, falseHits: 0, hint: false, sel: null, task, opened: Date.now() };
+    const showCount = task.remedial || L.showCount;
+    const ruleNames = [...new Set(errs.map((e) => e.rule))].map((r) => `«${ruleOf(r).name}»`);
+    const ask = showCount
+      ? `Нажми на слово с ошибкой и исправь его. Ошибок в записке: ${errs.length}.`
+      : 'Нажми на слово с ошибкой и исправь его. Сколько ошибок, не скажу: найди все сам и жми «Дело закрыто».';
+    const tip = L.showRules && !task.remedial ? ` Ищи почерк: ${ruleNames.join(', ')}.` : '';
     card(`
       <div class="case-head"><h2>Дело № ${S.n} · ${esc(title)}</h2><span class="pill" id="cnt"></span></div>
-      <div class="det"><div class="ava">Д.О.</div><div class="say">Нажми на слово с ошибкой и исправь его. Ошибок в записке: ${errs.length}.</div></div>
+      <div class="det"><div class="ava">Д.О.</div><div class="say">${esc(ask + tip)}</div></div>
       <div class="paper" id="paper"></div>
       <div class="edit" id="edit" hidden>
         <span class="lbl" id="editLbl"></span>
@@ -52,7 +76,7 @@
         <button class="btn-ghost" id="editNo">Отмена</button>
       </div>
       <div class="toast" id="toast"></div>
-      <div class="actions"><button class="btn-ghost" id="hint">Лупа: подсказка (−5)</button><button class="btn-main" id="done">Дело закрыто</button></div>`);
+      <div class="actions"><button class="btn-ghost" id="hint">Лупа: подсказка${L.freeHint ? '' : ' (−5)'}</button><button class="btn-main" id="done">Дело закрыто</button></div>`);
     const paper = $('paper');
 
     const render = (flashFalse) => {
@@ -75,7 +99,7 @@
         paper.append(sp);
       });
       const f = errs.filter((e) => e.state === 'ok').length;
-      $('cnt').textContent = `Улик найдено: ${f} из ${errs.length}`;
+      $('cnt').textContent = showCount ? `Улик найдено: ${f} из ${errs.length}` : `Улик найдено: ${f}`;
     };
 
     const close = () => { $('edit').hidden = true; T.sel = null; render(); };
@@ -110,7 +134,7 @@
       if (core.norm(v) === core.norm(t.right)) {
         t.state = 'ok';
         close();
-        if (errs.every((e) => e.state === 'ok')) toast('Все улики найдены! Жми «Дело закрыто».', 'good');
+        if (errs.every((e) => e.state === 'ok')) toast(showCount ? 'Все улики найдены! Жми «Дело закрыто».' : 'Улика найдена! Если больше ошибок нет, жми «Дело закрыто».', 'good');
         else toast(`Улика найдена! ${ruleOf(t.rule).villain} оставил след: «${t.text}» → «${t.right}».`, 'good');
         return;
       }
@@ -130,29 +154,41 @@
       const e = errs.find((x) => x.state !== 'ok');
       if (!e) return;
       T.hint = true;
+      e.hinted = true;
       const i = toks.indexOf(e);
       toks.forEach((t) => { t.hint = false; });
       [i - 2, i, i + 2].forEach((j) => { if (toks[j] && toks[j].t !== 'p') toks[j].hint = true; });
       render();
       toast('Лупа подсветила место, где спряталась ошибка.');
     };
-    $('done').onclick = () => finishTask(title, T, drillRule);
+    $('done').onclick = () => finishTask(T, L);
     render();
   }
 
   // ---------- итог дела ----------
-  async function finishTask(title, T, drillRule) {
+  // Ответы для подсчёта точности: верно с первого раза — 1, с подсказкой, со второй попытки
+  // или найдено, но исправлено неверно — 0,5, пропущено — 0, ложное обвинение — 0 (не больше трёх за дело).
+  function itemsOf(T) {
+    const items = T.errs.map((e) => (e.state === 'ok' ? (e.tries || e.hinted ? 0.5 : 1) : e.state === 'half' ? 0.5 : 0));
+    for (let i = 0; i < Math.min(3, T.falseHits); i++) items.push(0);
+    return items;
+  }
+
+  async function finishTask(T, L) {
     $('done').disabled = true;
-    const r = core.scoreTask({ tokens: T.toks, falseHits: T.falseHits, hint: T.hint });
+    const task = T.task;
+    const r = core.scoreTask({ tokens: T.toks, falseHits: T.falseHits, hint: T.hint && !L.freeHint });
+    if (T.hint && L.freeHint) r.clean = false;
     const statsAfter = core.applyStats(profile.stats, T.toks);
     profile = await api.invoke('session:task', {
-      caseTitle: drillRule ? null : title, drillRule: drillRule || null,
+      caseTitles: task.caseTitles || [], drillRules: task.drillRules || [],
       coins: r.coins, found: r.found, total: r.total, falseHits: T.falseHits,
       statsAfter, reviewRules: r.reviewRules, clean: r.clean,
     });
+    await report(itemsOf(T), 'ru:' + task.kind, (Date.now() - T.opened) / 1000);
     S.coins += r.coins; S.found += r.found; S.total += r.total;
     r.reviewRules.forEach((x) => { if (!S.missedRules.includes(x)) S.missedRules.push(x); });
-    if (!r.reviewRules.length) return showResult(true);
+    if (!r.reviewRules.length) return nextTask([]);
     showReview(T, r);
   }
 
@@ -165,7 +201,12 @@
     }).join('')}</div>` : '';
     const rules = r.reviewRules;
     let k = 0;
-    const next = () => (k >= rules.length ? afterReview(rules) : ruleCard(rules[k++], T, next));
+    const opened = Date.now();
+    const next = async () => {
+      if (k < rules.length) return ruleCard(rules[k++], T, next);
+      await report([], 'ru:review', (Date.now() - opened) / 1000);
+      return nextTask(rules);
+    };
     card(`
       <div class="case-head"><h2>Разбор дела</h2><span class="pill">+${r.coins} коинов</span></div>
       <div class="det"><div class="ava">Д.О.</div><div class="say">${missed
@@ -212,16 +253,27 @@
     });
   }
 
-  // Следующее дело — короткое, на самое слабое из пропущенных правил.
-  function afterReview(rules) {
-    if (S.n >= cfg.maxTasks) return showResult(false);
-    const sorted = rules.slice().sort((a, b) => core.ruleWeight(profile.stats, b) - core.ruleWeight(profile.stats, a));
-    for (const r of sorted) {
-      const d = core.pickDrill(data.content, profile, r);
-      if (d) return showIntro('Новый след', `Безграмотный снова прокололся на правиле «${ruleOf(r).name}». Это дело короче.`, d.text, r);
+  // Следующее дело. После разбора — короткое дело на самое слабое из пропущенных правил,
+  // иначе — записка по текущему уровню. Дела идут, пока занятие укладывается в 2–3 минуты.
+  function nextTask(missedRules) {
+    const t = elapsed();
+    if (missedRules.length && AD.shouldContinue({ elapsed: t, est: AD.estTime(adapt, 'ru:drill'), minSec, maxSec, tasks: S.n })) {
+      const sorted = missedRules.slice().sort((a, b) => core.ruleWeight(profile.stats, b) - core.ruleWeight(profile.stats, a));
+      for (const r of sorted) {
+        const d = core.pickDrill(data.content, profile, r);
+        if (d) {
+          S.drilled.push(r);
+          return showIntro({ title: 'Новый след', intro: `Безграмотный снова прокололся на правиле «${ruleOf(r).name}». Это дело короче.`,
+            text: d.text, kind: 'drill', caseTitles: [], drillRules: [r], remedial: true });
+        }
+      }
     }
-    const c = core.pickCase(data.content, profile);
-    return showIntro(c.title, c.intro, c.text);
+    const kind = AD.nextRuKind(adapt, { elapsed: t, minSec, maxSec, tasks: S.n });
+    if (!kind) return showResult(!S.missedRules.length);
+    const task = core.buildTask(data.content, profile, kind, null, S.drilled);
+    S.drilled = S.drilled.concat(task.drillRules);
+    task.kind = kind;
+    return showIntro(task);
   }
 
   // ---------- итог занятия ----------
@@ -245,10 +297,10 @@
         : cfg.vacationsLeftToday > 0 ? `Хватает на «отпуск»! В копилке ${profile.coins}, отпуск стоит ${price}.`
           : `В копилке ${profile.coins}. Сегодня отпусков больше нет, приходи завтра.`;
     const say = solved
-      ? (S.n === 1 ? 'С первого раза, без единого промаха! Возвращайся в игру.' : 'Все улики собраны. Отличная работа!')
+      ? 'Все улики собраны, ни одного промаха! Возвращайся в игру.'
       : 'Безграмотный пока ушёл, но мы знаем его почерк. Слабые правила я буду давать чаще.';
     card(`
-      <div class="case-head"><h2>${solved ? 'Дело раскрыто!' : `На сегодня хватит, ${esc(cfg.childName || 'сыщик')}`}</h2><span class="pill">${esc(rank.n)}</span></div>
+      <div class="case-head"><h2>${solved ? 'Дела раскрыты!' : `На сегодня хватит, ${esc(cfg.childName || 'сыщик')}`}</h2><span class="pill">${esc(rank.n)}</span></div>
       <div class="det"><div class="ava">Д.О.</div><div class="say">${say}</div></div>
       ${promoted ? `<div class="rule" style="text-align:center"><div class="villain">Приказ по управлению сыска</div><h3>Присвоено звание «${esc(rank.n)}»!</h3><div>Поздравляю, ${esc(cfg.childName || 'сыщик')}. Так держать!</div></div>` : ''}
       <div class="stats">
@@ -274,6 +326,5 @@
     }
   }
 
-  const first = core.pickCase(data.content, profile);
-  showIntro(first.title, first.intro, first.text);
+  nextTask([]);
 })();

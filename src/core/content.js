@@ -105,6 +105,57 @@
     return { rule, text: list[used % list.length], index: used % list.length };
   }
 
+  // Правило для короткого дела: чаще «слабые» правила. exclude — правила, которых сейчас не хотим.
+  function pickDrillRule(content, profile, rnd, exclude) {
+    const random = rnd || Math.random;
+    const stats = profile && profile.stats;
+    let rules = Object.keys(content.drills || {}).filter((r) => (content.drills[r] || []).length);
+    const left = rules.filter((r) => !(exclude || []).includes(r));
+    if (left.length) rules = left;
+    if (!rules.length) return null;
+    const w = rules.map((r) => ruleWeight(stats, r));
+    let x = random() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < rules.length; i++) {
+      x -= w[i];
+      if (x < 0) return rules[i];
+    }
+    return rules[rules.length - 1];
+  }
+
+  // Записка для адаптивного занятия. kind: 'drill' | 'case' | 'case+drill' | 'case+case'.
+  // avoid — правила коротких дел, которые уже были в этом занятии (чтобы не крутить одно правило).
+  // Возвращает { title, intro, text, caseTitles, drillRules }.
+  function buildTask(content, profile, kind, rnd, avoid) {
+    const random = rnd || Math.random;
+    const parts = String(kind || 'case').split('+');
+    const p = Object.assign({}, profile, { seenCases: ((profile && profile.seenCases) || []).slice(), drillIndex: Object.assign({}, profile && profile.drillIndex) });
+    const out = { title: '', intro: '', texts: [], caseTitles: [], drillRules: [] };
+    parts.forEach((part) => {
+      if (part === 'drill') {
+        const rule = pickDrillRule(content, p, random, (avoid || []).concat(errorsOf(out.texts.join(' ')).map((e) => e.rule)));
+        const d = rule && pickDrill(content, p, rule);
+        if (!d) return;
+        p.drillIndex[rule] = (p.drillIndex[rule] || 0) + 1;
+        out.texts.push(d.text);
+        out.drillRules.push(rule);
+        if (!out.title) { out.title = 'Короткое дело'; out.intro = 'Безграмотный черкнул пару строк.'; }
+      } else {
+        const c = pickCase(content, p, random);
+        p.lastCase = c.title;
+        p.seenCases = rememberCase(p.seenCases, c.title);
+        out.texts.push(c.text);
+        out.caseTitles.push(c.title);
+        if (!out.title) { out.title = c.title; out.intro = c.intro; }
+        else out.title += ' и ' + c.title.charAt(0).toLowerCase() + c.title.slice(1);
+      }
+    });
+    if (!out.texts.length) {
+      const c = pickCase(content, p, random);
+      return { title: c.title, intro: c.intro, text: c.text, caseTitles: [c.title], drillRules: [] };
+    }
+    return { title: out.title, intro: out.intro, text: out.texts.join(out.caseTitles.length > 1 ? '\n\n' : ' '), caseTitles: out.caseTitles, drillRules: out.drillRules };
+  }
+
   // Звание по сумме заработанных коинов.
   // Звания: коины за всё время, а для двух высших ещё и уверенно пойманные правила.
   const RANKS = [
@@ -174,7 +225,7 @@
     return s;
   }
 
-  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, rememberCase, pickDrill, rankOf, needText, masteredRules, scoreTask, applyStats, RANKS };
+  const api = { parse, norm, errorsOf, validate, ruleWeight, pickCase, rememberCase, pickDrill, pickDrillRule, buildTask, rankOf, needText, masteredRules, scoreTask, applyStats, RANKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.OshibkinCore = api;
 })(typeof self !== 'undefined' ? self : this);

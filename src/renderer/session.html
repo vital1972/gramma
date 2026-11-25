@@ -15,7 +15,7 @@
   .det { display: flex; gap: 12px; align-items: center; }
   .ava { flex: none; width: 58px; height: 58px; border-radius: 50%; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; font-weight: 700; font-size: 18px; border: 3px solid #fff3; }
   .say { background: var(--desk-3); border-radius: 12px; padding: 10px 14px; min-width: 0; font-size: 16px; }
-  .paper { background: var(--paper); color: var(--paper-ink); font-family: var(--hand); font-size: 28px; line-height: 1.75; padding: 18px 24px; border-radius: 6px;
+  .paper { white-space: pre-wrap; background: var(--paper); color: var(--paper-ink); font-family: var(--hand); font-size: 28px; line-height: 1.75; padding: 18px 24px; border-radius: 6px;
     background-image: repeating-linear-gradient(transparent 0 48px, var(--paper-line) 48px 49px); background-position: 0 12px; transform: rotate(-.4deg); }
   .w { cursor: pointer; border-radius: 6px; padding: 0 2px; transition: background .15s; }
   .w:hover { background: rgba(240,180,60,.35); }
@@ -58,6 +58,7 @@
     <div class="say">Детектив открывает папку с делом…</div>
   </main>
 <script src="../core/content.js"></script>
+<script src="../core/adaptive.js"></script>
 <script src="session.js"></script>
 </body>
 </html>

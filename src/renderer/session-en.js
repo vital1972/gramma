@@ -3,6 +3,7 @@
 (async () => {
   const api = window.oshibkin;
   const EN = window.OshibkinEnglish;
+  const AD = window.OshibkinAdaptive;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -12,9 +13,21 @@
   const cfg = data.settings;
   let pen = data.pen;
   let profile = data.profile;
-  const plan = EN.planSession(bank, pen, { now: data.now, newWords: cfg.newWords });
+  let adapt = AD.ensure(data.adapt, 'en');
+  const L = () => AD.levelOf('en', adapt.level);
+  const minSec = cfg.sessionMinSec || 120;
+  const maxSec = cfg.sessionMaxSec || 180;
+  const plan = EN.planSession(bank, pen, { now: data.now, newWords: cfg.newWords, maxWords: L().review });
   const ch = plan.chapter;
-  const S = { coins: 0, clean: true, notes: 0, found: 0, total: 0, arrest: null, started: Date.now(), words: 0, wordsOk: 0 };
+  const S = { coins: 0, clean: true, notes: 0, found: 0, total: 0, arrest: null, started: Date.now(), words: 0, wordsOk: 0, asked: [], extras: 0 };
+  const elapsed = () => (Date.now() - S.started) / 1000;
+  // Ответы (1 — верно с первого раза, 0 — нет) и время шага уходят в main: там хранится уровень.
+  async function report(items, key, sec) {
+    const r = await api.invoke('adapt:report', { subject: 'en', items, key, sec });
+    adapt = AD.ensure(r.state, 'en');
+    return r;
+  }
+  const fits = (key) => AD.shouldContinue({ elapsed: elapsed(), est: AD.estTime(adapt, key), minSec, maxSec, tasks: S.notes + S.extras });
   const W = (w) => bank.words[w];
 
   // ---------- голос ----------
@@ -47,7 +60,7 @@
   }
 
   // ---------- шаги ----------
-  const reviewMode = (w) => (!hasVoice || (pen.words[w] && pen.words[w].box >= 2) ? 'read' : 'hear');
+  const reviewMode = (w) => (!hasVoice || (pen.words[w] && pen.words[w].box >= L().readBox) ? 'read' : 'hear');
   const wordItems = plan.fresh.map((w) => ({ w, mode: hasVoice ? 'hear' : 'read' })).concat(plan.review.map((w) => ({ w, mode: reviewMode(w) })));
   const phon = plan.phonics && (plan.phonics.mode === 'see' || hasVoice) ? plan.phonics : null;
   const STEPS = [];
@@ -81,7 +94,47 @@
     if (s === 'phonics') return phonics();
     if (s === 'intercept') return intercept();
     if (s === 'note') return note(plan.note.text, plan.note.id, null);
-    return result();
+    if (s === 'xnote') return extraNote();
+    if (s === 'xwords') return extraWordsStep();
+    return extraOrResult();
+  }
+
+  // Основные шаги пройдены. Если до конца окна 2–3 минуты ещё есть время, даём дополнительные:
+  // по очереди записку бандита и повторение знакомых слов.
+  function extraOrResult() {
+    const wordsKey = 'en:word';
+    const canWords = EN.extraWords(bank, pen, S.asked, 1).length > 0;
+    const wordsFit = canWords && fits(wordsKey) && AD.shouldContinue({ elapsed: elapsed(), est: AD.estTime(adapt, wordsKey) * 3, minSec, maxSec, tasks: S.notes + S.extras });
+    const noteFit = !!extraRule() && fits('en:drill');
+    const preferNote = S.extras % 2 === 0;
+    let step = null;
+    if (preferNote && noteFit) step = 'xnote';
+    else if (wordsFit) step = 'xwords';
+    else if (noteFit) step = 'xnote';
+    if (!step) return result();
+    S.extras++;
+    STEPS.splice(stepIdx, 0, step);
+    stepIdx--;
+    return next();
+  }
+
+  // Правило для дополнительной записки: бандит главы или самый «слабый» из уже пойманных.
+  function extraRule() {
+    const rules = [ch.rule].concat(pen.arrested || []).filter((r, i, a) => a.indexOf(r) === i && EN.pickDrill(bank, pen, r));
+    if (!rules.length) return null;
+    return rules.sort((a, b) => EN.ruleWeight(pen.stats, b) - EN.ruleWeight(pen.stats, a))[0];
+  }
+  function extraNote() {
+    const r = extraRule();
+    const d = r && EN.pickDrill(bank, pen, r);
+    if (!d) return extraOrResult();
+    return note(d.text, null, r, true);
+  }
+  function extraWordsStep() {
+    const n = Math.max(2, Math.min(4, Math.floor((maxSec - elapsed()) / AD.estTime(adapt, 'en:word'))));
+    const list = EN.extraWords(bank, pen, S.asked, n);
+    if (!list.length) return extraOrResult();
+    return listen(list.map((w) => ({ w, mode: reviewMode(w) })), 0, [], true);
   }
   function start() {
     stepIdx = 0;
@@ -116,7 +169,7 @@
 
   // ---------- новые слова ----------
   function newWords(i) {
-    if (i >= plan.fresh.length) return listen(0, []);
+    if (i >= plan.fresh.length) return listen(wordItems, 0, []);
     const w = plan.fresh[i];
     card('Новое слово в картотеке', `
       ${det('Это слово встретится в деле. Послушай и запомни.', '🗂️')}
@@ -130,24 +183,30 @@
   }
 
   // ---------- радиоперехват: слово → картинка ----------
-  function listen(i, results) {
-    if (i >= wordItems.length) {
+  function listen(items, i, results, extra) {
+    if (i === 0) S.wordsOpened = Date.now();
+    if (i >= items.length) {
       const coins = results.filter((r) => r.ok).length * 5;
       S.coins += coins;
       S.words += results.length;
       S.wordsOk += results.filter((r) => r.ok).length;
       if (results.some((r) => !r.ok)) S.clean = false;
-      return save({ coins, words: results }).then(next);
+      const sec = results.length ? (Date.now() - S.wordsOpened) / 1000 / results.length : 0;
+      return save({ coins, words: results })
+        .then(() => report(results.map((r) => (r.ok ? 1 : 0)), 'en:word', sec))
+        .then(next);
     }
-    const { w, mode } = wordItems[i];
-    const opts = EN.wordOptions(bank, w, pen);
-    const ask = mode === 'hear' ? 'Бандиты говорят по рации. Что они назвали?' : 'На записке бандита слово. Что оно значит?';
+    const { w, mode } = items[i];
+    if (!S.asked.includes(w)) S.asked.push(w);
+    const opts = EN.wordOptions(bank, w, pen, null, L().pics);
+    const ask = extra && i === 0 ? 'Проверим картотеку: банда снова говорит знакомыми словами. ' : '';
+    const q = mode === 'hear' ? 'Бандиты говорят по рации. Что они назвали?' : 'На записке бандита слово. Что оно значит?';
     card(mode === 'hear' ? 'Радиоперехват' : 'Слово из записки', `
-      ${det(`${ask} <span style="color:var(--ink-dim)">(${i + 1} из ${wordItems.length})</span>`, mode === 'hear' ? '📻' : '📝')}
+      ${det(`${ask}${q} <span style="color:var(--ink-dim)">(${i + 1} из ${items.length})</span>`, mode === 'hear' ? '📻' : '📝')}
       ${mode === 'hear'
         ? '<button class="btn-ip big-play" id="play">🔊 Слушать</button>'
         : `<div class="read-word">${esc(w)}${hasVoice ? ' <button class="btn-ghost" id="play">🔊</button>' : ''}</div>`}
-      <div class="grid4">${opts.map((k) => `<button class="pic" data-k="${esc(k)}">${W(k).e}<small></small></button>`).join('')}</div>
+      <div class="grid4${opts.length === 3 || opts.length === 6 ? ' g3' : ''}">${opts.map((k) => `<button class="pic" data-k="${esc(k)}">${W(k).e}<small></small></button>`).join('')}</div>
       <div class="toast" id="toast"></div>`);
     const play = () => say(w);
     if (mode === 'hear') setTimeout(play, 250);
@@ -164,7 +223,7 @@
           toast(`Верно: ${w} — ${W(w).ru}.${first ? ' +5' : ''}`, 'good');
           say(w);
           results.push({ w, ok: first });
-          setTimeout(() => listen(i + 1, results), 1300);
+          setTimeout(() => listen(items, i + 1, results, extra), 1300);
         } else {
           first = false;
           b.classList.add('wrong');
@@ -187,6 +246,7 @@
       <div id="after"></div>`);
     if (c.mode === 'hear') { const p = () => say(c.word, true); setTimeout(p, 250); $('play').onclick = p; }
     let first = true;
+    const opened = Date.now();
     document.querySelectorAll('.opt').forEach((b) => {
       b.onclick = () => {
         if (+b.dataset.k !== c.a) { first = false; S.clean = false; b.classList.add('wrong'); b.disabled = true; return; }
@@ -197,7 +257,12 @@
         coinsShown();
         say(c.word, true);
         $('after').innerHTML = `<div class="rule"><div>${esc(c.rule)}</div></div><div class="actions" style="margin-top:12px"><span></span><button class="btn-ip" id="go">Дальше</button></div>`;
-        $('go').onclick = async () => { $('go').disabled = true; await save({ coins, phonics: true }); next(); };
+        $('go').onclick = async () => {
+          $('go').disabled = true;
+          await save({ coins, phonics: true });
+          await report([first ? 1 : 0], 'en:phonics', (Date.now() - opened) / 1000);
+          next();
+        };
         $('go').focus();
       };
     });
@@ -231,6 +296,8 @@
     bindGloss($('card'));
     let done = 0;
     let coins = 0;
+    const opened = Date.now();
+    const answers = [];
     document.querySelectorAll('.q').forEach((qb) => {
       const q = x.qs[+qb.dataset.q];
       let first = true;
@@ -239,6 +306,7 @@
           if (+b.dataset.k !== q.a) { first = false; S.clean = false; b.classList.add('wrong'); b.disabled = true; return; }
           b.classList.add('right');
           qb.querySelectorAll('.opt').forEach((o) => { o.disabled = true; });
+          answers.push(first ? 1 : 0);
           if (first) { coins += 10; S.coins += 10; coinsShown(); }
           if (++done === x.qs.length) {
             $('go').disabled = false;
@@ -248,20 +316,31 @@
         };
       });
     });
-    $('go').onclick = async () => { $('go').disabled = true; await save({ coins, intercept: x.id }); next(); };
+    $('go').onclick = async () => {
+      $('go').disabled = true;
+      await save({ coins, intercept: x.id });
+      await report(answers, 'en:intercept', (Date.now() - opened) / 1000);
+      next();
+    };
   }
 
   // ---------- записка бандита ----------
-  function note(text, id, drillRule) {
+  function note(text, id, drillRule, extra) {
     const toks = EN.parse(text);
     const errs = toks.filter((t) => t.t === 'e');
     let falseHits = 0;
     const accused = new Set();
+    const opened = Date.now();
+    const lv = L();
+    const showCount = lv.showCount || (drillRule && !extra);
     const villain = (bank.rules[drillRule || errs[0].rule] || {}).villain || 'бандит';
-    card(drillRule ? `Ещё одна записка: ${villain}` : 'Записка бандита', `
-      ${det(drillRule
-        ? `${esc(villain)} снова прокололся. Найди ошибку и выбери, как правильно.`
-        : `Нашли записку. Её написал <b>${esc(villain)}</b>, он путает правило. Найди ${errs.length === 1 ? 'ошибку' : `все ошибки (${errs.length})`}: нажми на неправильное слово.`, '🔎')}
+    const find = showCount ? `Найди ${errs.length === 1 ? 'ошибку' : `все ошибки (${errs.length})`}` : 'Сколько там ошибок, не скажу. Найди все';
+    card(extra ? `Новая записка: ${villain}` : drillRule ? `Ещё одна записка: ${villain}` : 'Записка бандита', `
+      ${det(extra
+        ? `Интерпол перехватил ещё одну записку. Её написал <b>${esc(villain)}</b>. ${find}: нажми на неправильное слово.`
+        : drillRule
+          ? `${esc(villain)} снова прокололся. Найди ошибку и выбери, как правильно.`
+          : `Нашли записку. Её написал <b>${esc(villain)}</b>, он путает правило. ${find}: нажми на неправильное слово.`, '🔎')}
       <div class="tape" id="paper"><span class="stamp">EVIDENCE</span></div>
       <div class="gloss" id="gloss"></div>
       <div id="fix"></div>
@@ -299,17 +378,20 @@
       coinsShown();
       const slim = toks.filter((t) => t.t === 'e').map((t) => ({ t: 'e', rule: t.rule, state: t.state || '' }));
       await save({ coins: sc.coins, note: { id: drillRule ? null : id, tokens: slim, found: sc.found, total: sc.total, falseHits, clean: sc.clean }, drillRule });
+      const items = errs.map((e) => (e.state === 'ok' ? 1 : e.state === 'half' ? 0.5 : 0));
+      for (let k = 0; k < Math.min(3, falseHits); k++) items.push(0);
+      await report(items, drillRule ? 'en:drill' : 'en:note', (Date.now() - opened) / 1000);
       const rules = [...new Set(sc.missed.map((e) => e.rule))];
       const go = document.createElement('button');
       go.className = 'btn-ip';
-      if (rules.length && S.notes < cfg.maxTasks) {
+      if (rules.length) {
         toast(sc.found ? `Найдено ${sc.found} из ${sc.total}. Остальное подсвечено красным.` : 'Бандит ускользнул. Ошибки подсвечены красным.', 'bad');
         go.textContent = 'Разобрать правило';
         go.onclick = () => ruleCard(rules[0]);
       } else {
-        toast(sc.missed.length ? 'Ошибки подсвечены красным. На сегодня хватит.' : 'Попался! Все ошибки найдены.', sc.missed.length ? 'bad' : 'good');
-        go.textContent = 'Итог';
-        go.onclick = result;
+        toast('Попался! Все ошибки найдены.', 'good');
+        go.textContent = 'Дальше';
+        go.onclick = next;
       }
       $('done').replaceWith(go);
       go.focus();
@@ -330,7 +412,7 @@
       if (e.state) return;
       paper.querySelectorAll('.wd').forEach((x) => x.classList.remove('sel'));
       b.classList.add('sel');
-      const opts = shuffle([e.text, e.right].concat(e.alts));
+      const opts = shuffle([e.text, e.right].concat(e.alts.slice(0, lv.alts)));
       $('fix').innerHTML = `<div class="fixbox"><div>Как правильно вместо «<b>${esc(e.text)}</b>»?</div><div class="opts">${opts.map((o) => `<button class="opt" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div></div>`;
       $('fix').querySelectorAll('.opt').forEach((ob) => {
         ob.onclick = () => {
@@ -344,7 +426,7 @@
           say(e.right);
           $('fix').innerHTML = '';
           toast(ok ? `Улика! ${e.text} → ${e.right}` : `Ошибку нашёл, но правильно «${e.right}».`, ok ? 'good' : 'warn');
-          if (errs.every((x) => x.state)) setTimeout(finish, 700);
+          if (showCount && errs.every((x) => x.state)) setTimeout(finish, 700);
         };
       });
     }));
@@ -353,6 +435,7 @@
 
   function ruleCard(rule) {
     const R = bank.rules[rule];
+    const opened = Date.now();
     card(`Почерк преступника: ${R.name}`, `
       ${det('Бандит ускользнул, но мы знаем его слабость. Запомни правило.', '📒')}
       <div class="rule"><div class="villain">${esc(R.villain)}</div><h3>${esc(R.rule)}</h3><div class="ex">${esc(R.ex)}</div></div>
@@ -376,10 +459,12 @@
       };
       $('quiz').append(b);
     });
-    $('go').onclick = () => {
+    $('go').onclick = async () => {
+      $('go').disabled = true;
+      await report([], 'en:review', (Date.now() - opened) / 1000);
       const d = EN.pickDrill(bank, pen, rule);
-      if (d) note(d.text, null, rule);
-      else result();
+      if (d && fits('en:drill')) note(d.text, null, rule);
+      else next();
     };
   }
 
